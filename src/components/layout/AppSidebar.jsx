@@ -1,7 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ClipboardList, Plus, ShoppingBag, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "./Logo";
+import logoImg from "@/assets/logo.png";
 
 const links = [
   { href: "/pedidos", label: "Pedidos", icon: ClipboardList },
@@ -46,7 +48,9 @@ export function AppSidebar({ pathname }) {
               <ShoppingBag className="h-4 w-4" />
             </div>
             <div>
-              <div className="text-sm font-medium text-white">Diogo Store</div>
+              <div className="text-sm font-medium text-white">
+                <Image src={logoImg} alt="Diogo Store" width={120} height={24} className="object-contain" />
+              </div>
               <div className="text-xs text-zinc-500">Painel interno</div>
             </div>
           </div>

@@ -97,7 +97,7 @@ export function PedidoCard({ pedido }) {
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-400">
                 <span className="flex items-center gap-2"><Phone className="h-4 w-4 text-zinc-500" />{pedido.telefone || "Sem telefone"}</span>
                 <span className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-zinc-500" />{formatDateTime(pedido.criado_em)}</span>
-                <span className="flex items-center gap-2">ID #{pedido.id}</span>
+                {/* <span className="flex items-center gap-2">ID #{pedido.id}</span> */}
               </div>
             </div>
           </div>
