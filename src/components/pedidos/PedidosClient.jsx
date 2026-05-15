@@ -11,8 +11,8 @@ export function PedidosClient() {
     <AppShell>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-semibold text-white">Pedidos</h1>
-          <p className="mt-1 text-sm text-zinc-400">Acompanhe todos os pedidos e seus itens individualmente.</p>
+          <h1 className="text-3xl font-semibold text-white">Gerenciamento de Pedidos</h1>
+          <p className="mt-1 text-sm text-zinc-400">Controle individual de status por item de venda.</p>
         </div>
 
         {erro ? (

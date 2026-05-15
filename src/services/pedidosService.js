@@ -55,7 +55,7 @@ export async function listarPedidos({ termo = "", statusId = "", somenteComProbl
 
   return pedidos.filter((pedido) => {
     const itens = pedido.itens_pedido ?? [];
-    const correspondeTermo = !termoLimpo || matchText(pedido.nome_cliente, termoLimpo) || matchText(pedido.telefone, termoLimpo) || itens.some((item) => matchText(item.nome_produto, termoLimpo) || matchText(item.rastreios?.codigo_rastreio, termoLimpo));
+    const correspondeTermo = !termoLimpo || matchText(pedido.id, termoLimpo) || matchText(pedido.nome_cliente, termoLimpo) || matchText(pedido.telefone, termoLimpo) || itens.some((item) => matchText(item.nome_produto, termoLimpo) || matchText(item.rastreios?.codigo_rastreio, termoLimpo));
     const correspondeStatus = !statusId || itens.some((item) => String(item.status_item_id) === String(statusId));
     const correspondeProblema = !somenteComProblema || itens.some((item) => Number(item.status_item_id) === 7);
     const correspondePronto = !somenteProntos || itens.some((item) => Number(item.status_item_id) === 4);
