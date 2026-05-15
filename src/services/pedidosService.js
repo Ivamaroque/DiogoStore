@@ -1,0 +1,168 @@
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { getResumoFinanceiro, getResumoPedido } from "@/lib/constants/status";
+import { parseCurrency } from "@/utils/currency";
+import { obterOuCriarRastreio } from "./rastreiosService";
+
+const PEDIDO_SELECT = `
+  *,
+  perfis (
+    id,
+    nome_completo,
+    funcao
+  ),
+  itens_pedido (
+    *,
+    status_itens (
+      id,
+      nome,
+      descricao,
+      cor
+    ),
+    rastreios (
+      id,
+      codigo_rastreio,
+      rastreio_em_grupo
+    )
+  )
+`;
+
+function normalizePedido(pedido) {
+  if (!pedido) return null;
+
+  const financeiro = getResumoFinanceiro(pedido.valor_total, pedido.valor_pago);
+  const itens = [...(pedido.itens_pedido ?? [])].sort((a, b) => new Date(a.criado_em ?? 0) - new Date(b.criado_em ?? 0));
+
+  return {
+    ...pedido,
+    valor_total: financeiro.valorTotal,
+    valor_pago: financeiro.valorPago,
+    valor_restante: financeiro.valorRestante,
+    itens_pedido: itens,
+    resumo_status: getResumoPedido(itens),
+  };
+}
+
+function matchText(source, term) {
+  return String(source ?? "").toLowerCase().includes(term);
+}
+
+export async function listarPedidos({ termo = "", statusId = "", somenteComProblema = false, somenteProntos = false, somenteEntregues = false, somenteCancelados = false, somenteComRestante = false, rastreioEmGrupo = false } = {}, supabase = getSupabaseBrowserClient()) {
+  const { data, error } = await supabase.from("pedidos").select(PEDIDO_SELECT).order("criado_em", { ascending: false });
+  if (error) throw error;
+
+  const termoLimpo = termo.trim().toLowerCase();
+  const pedidos = (data ?? []).map(normalizePedido);
+
+  return pedidos.filter((pedido) => {
+    const itens = pedido.itens_pedido ?? [];
+    const correspondeTermo = !termoLimpo || matchText(pedido.nome_cliente, termoLimpo) || matchText(pedido.telefone, termoLimpo) || itens.some((item) => matchText(item.nome_produto, termoLimpo) || matchText(item.rastreios?.codigo_rastreio, termoLimpo));
+    const correspondeStatus = !statusId || itens.some((item) => String(item.status_item_id) === String(statusId));
+    const correspondeProblema = !somenteComProblema || itens.some((item) => Number(item.status_item_id) === 7);
+    const correspondePronto = !somenteProntos || itens.some((item) => Number(item.status_item_id) === 4);
+    const correspondeEntregue = !somenteEntregues || itens.some((item) => Number(item.status_item_id) === 5);
+    const correspondeCancelado = !somenteCancelados || itens.some((item) => Number(item.status_item_id) === 6);
+    const correspondeRestante = !somenteComRestante || Number(pedido.valor_restante) > 0;
+    const correspondeRastreioGrupo = !rastreioEmGrupo || itens.some((item) => item.rastreios?.rastreio_em_grupo);
+
+    return (
+      correspondeTermo &&
+      correspondeStatus &&
+      correspondeProblema &&
+      correspondePronto &&
+      correspondeEntregue &&
+      correspondeCancelado &&
+      correspondeRestante &&
+      correspondeRastreioGrupo
+    );
+  });
+}
+
+export async function buscarPedidoPorId(id, supabase = getSupabaseBrowserClient()) {
+  const { data, error } = await supabase.from("pedidos").select(PEDIDO_SELECT).eq("id", id).single();
+  if (error) throw error;
+
+  return normalizePedido(data);
+}
+
+export async function criarPedidoCompleto({ pedido, itens, criadoPor }, supabase = getSupabaseBrowserClient()) {
+  const valorTotal = parseCurrency(pedido.valor_total);
+  const valorPago = parseCurrency(pedido.valor_pago);
+  const valorRestante = Math.max(valorTotal - valorPago, 0);
+
+  const { data: pedidoCriado, error: pedidoError } = await supabase
+    .from("pedidos")
+    .insert({
+      nome_cliente: pedido.nome_cliente,
+      telefone: pedido.telefone || null,
+      valor_total: valorTotal,
+      valor_pago: valorPago,
+      valor_restante: valorRestante,
+      forma_pagamento: pedido.forma_pagamento || null,
+      criado_por: criadoPor,
+    })
+    .select("*")
+    .single();
+
+  if (pedidoError) throw pedidoError;
+
+  const itensCriados = [];
+
+  for (const item of itens) {
+    const rastreio = await obterOuCriarRastreio(
+      {
+        codigo_rastreio: item.codigo_rastreio,
+        rastreio_em_grupo: item.rastreio_em_grupo,
+      },
+      supabase,
+    );
+
+    const { data: itemCriado, error: itemError } = await supabase
+      .from("itens_pedido")
+      .insert({
+        pedido_id: pedidoCriado.id,
+        rastreio_id: rastreio?.id ?? null,
+        quantidade: Number(item.quantidade ?? 1),
+        nome_produto: item.nome_produto,
+        tipo: item.tipo || null,
+        tamanho: item.tamanho || null,
+        personalizacao: item.personalizacao || null,
+        observacao_status: item.observacao_status || null,
+        ultima_atualizacao_status: new Date().toISOString(),
+        status_item_id: Number(item.status_item_id ?? 1),
+      })
+      .select("*")
+      .single();
+
+    if (itemError) throw itemError;
+    itensCriados.push(itemCriado);
+  }
+
+  return { pedido: pedidoCriado, itens: itensCriados };
+}
+
+export async function atualizarPedido(id, payload, supabase = getSupabaseBrowserClient()) {
+  const { data, error } = await supabase.from("pedidos").update(payload).eq("id", id).select("*").single();
+  if (error) throw error;
+  return data;
+}
+
+export async function obterResumoDashboard(supabase = getSupabaseBrowserClient()) {
+  const pedidos = await listarPedidos({}, supabase);
+  const totalPedidos = pedidos.length;
+  const totalVendido = pedidos.reduce((soma, pedido) => soma + Number(pedido.valor_total || 0), 0);
+  const totalRecebido = pedidos.reduce((soma, pedido) => soma + Number(pedido.valor_pago || 0), 0);
+  const totalAReceber = pedidos.reduce((soma, pedido) => soma + Number(pedido.valor_restante || 0), 0);
+
+  const todosItens = pedidos.flatMap((pedido) => pedido.itens_pedido ?? []);
+
+  return {
+    totalPedidos,
+    totalVendido,
+    totalRecebido,
+    totalAReceber,
+    totalItensProblema: todosItens.filter((item) => Number(item.status_item_id) === 7).length,
+    totalItensProntos: todosItens.filter((item) => Number(item.status_item_id) === 4).length,
+    totalItensEntregues: todosItens.filter((item) => Number(item.status_item_id) === 5).length,
+    pedidosRecentes: pedidos.slice(0, 5),
+  };
+}
