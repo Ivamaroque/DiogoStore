@@ -1,5 +1,6 @@
 import { Space_Grotesk } from "next/font/google";
 import { Toaster } from "sonner";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -16,7 +17,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${spaceGrotesk.variable} bg-zinc-950 font-sans antialiased`}>
-        {children}
+        <AuthProvider>{children}</AuthProvider>
         <Toaster richColors position="top-right" theme="dark" />
       </body>
     </html>

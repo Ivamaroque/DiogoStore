@@ -18,6 +18,7 @@ import { formatPhone } from "@/utils/masks";
 import { RastreioBadge } from "./RastreioBadge";
 import { StatusBadge } from "./StatusBadge";
 import { formatCurrency } from "@/utils/currency";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 const itemPadrao = {
   quantidade: 1,
@@ -31,8 +32,9 @@ const itemPadrao = {
   status_item_id: 1,
 };
 
-export function PedidoForm({ userId }) {
+export function PedidoForm() {
   const router = useRouter();
+  const { user } = useAuth();
   const [nomeCliente, setNomeCliente] = useState("");
   const [telefone, setTelefone] = useState("");
   const [valorTotal, setValorTotal] = useState("");
@@ -72,7 +74,7 @@ export function PedidoForm({ userId }) {
     if (!nomeCliente.trim()) return toast.error("Informe o nome do cliente.");
     if (!itens.length) return toast.error("Adicione pelo menos um item.");
     if (valorTotalNumerico <= 0) return toast.error("O valor total precisa ser maior que zero.");
-    if (!userId) return toast.error("Usuário logado não encontrado.");
+    if (!user?.id) return toast.error("Usuário logado não encontrado.");
 
     setSalvando(true);
     try {
@@ -86,7 +88,7 @@ export function PedidoForm({ userId }) {
             forma_pagamento: formaPagamento,
           },
           itens,
-          criadoPor: userId,
+          criadoPor: user.id,
         },
       );
 

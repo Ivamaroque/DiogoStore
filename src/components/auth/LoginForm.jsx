@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Lock, User } from "lucide-react";
 import { signIn } from "@/services/authService";
@@ -9,13 +9,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/layout/Logo";
+import { useAuth } from "./AuthProvider";
 
 export function LoginForm() {
   const router = useRouter();
+  const { loading, isAuthenticated } = useAuth();
   const [usuario, setUsuario] = useState("");
   const [password, setPassword] = useState("");
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
+
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      router.replace("/pedidos");
+    }
+  }, [isAuthenticated, loading, router]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -24,7 +32,7 @@ export function LoginForm() {
 
     try {
       await signIn({ usuario, password });
-      router.push("/dashboard");
+      router.push("/pedidos");
       router.refresh();
     } catch (error) {
       setErro(error?.message || "Usuário ou senha inválidos");

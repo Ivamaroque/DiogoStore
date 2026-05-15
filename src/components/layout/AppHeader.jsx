@@ -7,10 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "./Logo";
 import { signOutUser } from "@/services/authService";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { usePerfilAtual } from "@/hooks/usePerfilAtual";
 
-export function AppHeader({ perfil, email }) {
+export function AppHeader() {
   const router = useRouter();
-  const nome = perfil?.nome_completo || email || "Funcionário";
+  const { user } = useAuth();
+  const { perfil } = usePerfilAtual(user?.id);
+  const nome = perfil?.nome_completo || user?.email || "Funcionário";
 
   async function handleLogout() {
     await signOutUser();

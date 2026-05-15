@@ -6,12 +6,16 @@ import { listarPedidos } from "@/services/pedidosService";
 export function usePedidos(filtros = {}) {
   const [pedidos, setPedidos] = useState([]);
   const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState(null);
 
   async function carregar() {
     setCarregando(true);
+    setErro(null);
     try {
       const dados = await listarPedidos(filtros);
       setPedidos(dados);
+    } catch (error) {
+      setErro(error);
     } finally {
       setCarregando(false);
     }
@@ -25,6 +29,7 @@ export function usePedidos(filtros = {}) {
   return {
     pedidos,
     carregando,
+    erro,
     recarregar: carregar,
   };
 }

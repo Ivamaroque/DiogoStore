@@ -30,7 +30,7 @@ export function ListaPedidos({ statusItens = [] }) {
     rastreioEmGrupo,
   }), [termo, statusId, somenteComProblema, somenteProntos, somenteEntregues, somenteCancelados, somenteComRestante, rastreioEmGrupo]);
 
-  const { pedidos, carregando, recarregar } = usePedidos(filtros);
+  const { pedidos, carregando, erro, recarregar } = usePedidos(filtros);
 
   return (
     <div className="space-y-6">
@@ -95,7 +95,13 @@ export function ListaPedidos({ statusItens = [] }) {
         </Button>
       </div>
 
-      {carregando ? (
+      {erro ? (
+        <Card className="border-zinc-800 bg-zinc-900/95">
+          <CardContent className="px-6 py-10 text-center text-sm text-red-300">
+            Não foi possível carregar os pedidos. Tente novamente.
+          </CardContent>
+        </Card>
+      ) : carregando ? (
         <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
           {[...Array(3)].map((_, index) => (
             <div key={index} className="h-72 animate-pulse rounded-3xl border border-zinc-800 bg-zinc-900" />
