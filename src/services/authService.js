@@ -1,32 +1,31 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
-export async function buscarPerfilPorUsuario(usuario, supabase = getSupabaseBrowserClient()) {
+export async function buscarEmailPorUsuario(usuario, supabase = getSupabaseBrowserClient()) {
   const usuarioLimpo = String(usuario ?? "").trim();
 
   if (!usuarioLimpo) return null;
 
-  const { data, error } = await supabase
-    .from("perfis")
-    .select("id, nome_completo, funcao, usuario, email")
-    .eq("usuario", usuarioLimpo)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("buscar_email_por_usuario", {
+    usuario_login: usuarioLimpo,
+  });
 
   if (error) throw error;
-  return data ?? null;
+
+  return data?.[0]?.email ?? null;
 }
 
 export async function signIn({ usuario, password }) {
   const supabase = getSupabaseBrowserClient();
 
   try {
-    const perfil = await buscarPerfilPorUsuario(usuario, supabase);
+    const email = await buscarEmailPorUsuario(usuario, supabase);
 
-    if (!perfil?.email) {
+    if (!email) {
       throw new Error("Usuário ou senha inválidos");
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: perfil.email,
+      email,
       password,
     });
 
