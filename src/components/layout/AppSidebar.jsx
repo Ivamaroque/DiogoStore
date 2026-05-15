@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { ClipboardList, Home, Plus, ShoppingBag } from "lucide-react";
+import { ClipboardList, Plus, ShoppingBag, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "./Logo";
 
 const links = [
-  { href: "/dashboard", label: "Dashboard", icon: Home },
   { href: "/pedidos", label: "Pedidos", icon: ClipboardList },
   { href: "/pedidos/novo", label: "Novo pedido", icon: Plus },
+  { href: "/funcionarios", label: "Funcionários", icon: Users },
 ];
 
 export function AppSidebar({ pathname }) {

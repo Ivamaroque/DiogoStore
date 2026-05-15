@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { ClipboardList, Home, Plus } from "lucide-react";
+import { ClipboardList, Plus, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
-  { href: "/dashboard", label: "Home", icon: Home },
   { href: "/pedidos", label: "Pedidos", icon: ClipboardList },
   { href: "/pedidos/novo", label: "Novo", icon: Plus },
+  { href: "/funcionarios", label: "Funcionários", icon: Users },
 ];
 
 export function MobileNav({ pathname }) {
