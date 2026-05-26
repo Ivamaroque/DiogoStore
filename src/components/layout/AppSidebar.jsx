@@ -4,6 +4,8 @@ import { ClipboardList, Plus, ShoppingBag, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "./Logo";
 import logoImg from "@/assets/logo.png";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { usePerfilAtual } from "@/hooks/usePerfilAtual";
 
 const links = [
   { href: "/pedidos", label: "Pedidos", icon: ClipboardList },
@@ -12,6 +14,10 @@ const links = [
 ];
 
 export function AppSidebar({ pathname }) {
+  const { user } = useAuth();
+  const { perfil } = usePerfilAtual(user?.id);
+  const podeGerenciarFuncionarios = perfil?.funcao === "Gestor";
+
   return (
     <aside className="hidden w-80 shrink-0 border-r border-zinc-800 bg-zinc-950/95 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
       <div className="border-b border-zinc-800 px-6 py-5">
@@ -19,7 +25,7 @@ export function AppSidebar({ pathname }) {
       </div>
 
       <nav className="flex-1 space-y-2 px-4 py-6">
-        {links.map((link) => {
+        {links.filter((link) => link.href !== "/funcionarios" || podeGerenciarFuncionarios).map((link) => {
           const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
           const Icon = link.icon;
 

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ClipboardList, Plus, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { usePerfilAtual } from "@/hooks/usePerfilAtual";
 
 const items = [
   { href: "/pedidos", label: "Pedidos", icon: ClipboardList },
@@ -9,10 +11,14 @@ const items = [
 ];
 
 export function MobileNav({ pathname }) {
+  const { user } = useAuth();
+  const { perfil } = usePerfilAtual(user?.id);
+  const podeGerenciarFuncionarios = perfil?.funcao === "Gestor";
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-800 bg-black/95 px-3 py-2 backdrop-blur lg:hidden">
       <div className="grid grid-cols-3 gap-2">
-        {items.map((item) => {
+        {items.filter((item) => item.href !== "/funcionarios" || podeGerenciarFuncionarios).map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
 
