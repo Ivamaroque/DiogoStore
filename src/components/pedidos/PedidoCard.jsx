@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useState, useEffect } from "react";
-import { ArrowUpRight, CalendarDays, Clock3, ChevronDown, Package, Phone, User } from "lucide-react";
+import { ArrowUpRight, CalendarDays, Clock3, ChevronDown, Package, Phone, User, Copy, Edit2 } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -193,39 +194,31 @@ export function PedidoCard({ pedido }) {
 
               <div data-rastreio-root={item.id} className="grid w-full gap-3 sm:mt-0 sm:w-auto sm:gap-0">
                 <div className="grid w-full gap-3 sm:hidden">
-                  <div className="flex w-full items-center gap-3">
-                    <div data-status-root={item.id} className="relative flex flex-1 items-center gap-2">
-                      <button
-                        aria-label="Abrir menu de status"
-                        className="inline-flex min-w-0 flex-1 items-center justify-between gap-2 rounded-full border border-zinc-800 px-4 py-2 text-sm"
-                        onClick={(event) => {
-                          const rect = event.currentTarget.getBoundingClientRect();
+                  {item.rastreios ? (
+                    <RastreioBadge
+                      rastreio={item.rastreios}
+                      fullWidth
+                      onEditClick={(event) => {
+                        const rect = event?.currentTarget?.getBoundingClientRect?.();
+                        if (isRastreioOpen) {
                           setEditingRastreioFor(null);
                           setRastreioMenuRect(null);
+                          return;
+                        }
 
-                          if (isStatusOpen) {
-                            setEditingStatusFor(null);
-                            setStatusMenuRect(null);
-                            return;
-                          }
-
-                          setEditingStatusFor(item.id);
-                          setStatusMenuRect(rect);
-                        }}
-                        style={{ backgroundColor: getStatusBadgeStyle(current?.cor).backgroundColor, borderColor: getStatusBadgeStyle(current?.cor).borderColor, color: getStatusBadgeStyle(current?.cor).color }}
-                      >
-                        <span className="min-w-0 truncate text-xs">{current?.nome ?? "Status"}</span>
-                        <ChevronDown className="h-4 w-4 text-zinc-200" />
-                      </button>
-                    </div>
-
-                    <div className="relative flex flex-1 items-center gap-2">
-                      <RastreioBadge
-                        rastreio={item.rastreios}
-                        mode="edit"
-                        className="w-full"
-                        onEditClick={(event) => {
-                          const rect = event?.currentTarget?.getBoundingClientRect?.();
+                        setEditingRastreioFor(item.id);
+                        setEditingStatusFor(null);
+                        setStatusMenuRect(null);
+                        setRastreioValue(item.rastreios?.codigo_rastreio ?? "");
+                        setRastreioEmGrupo(Boolean(item.rastreios?.rastreio_em_grupo));
+                        if (rect) setRastreioMenuRect(rect);
+                      }}
+                    />
+                  ) : (
+                    <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          const rect = event.currentTarget.getBoundingClientRect();
                           if (isRastreioOpen) {
                             setEditingRastreioFor(null);
                             setRastreioMenuRect(null);
@@ -235,16 +228,40 @@ export function PedidoCard({ pedido }) {
                           setEditingRastreioFor(item.id);
                           setEditingStatusFor(null);
                           setStatusMenuRect(null);
-                          setRastreioValue(item.rastreios?.codigo_rastreio ?? "");
-                          setRastreioEmGrupo(Boolean(item.rastreios?.rastreio_em_grupo));
+                          setRastreioValue("");
+                          setRastreioEmGrupo(false);
                           if (rect) setRastreioMenuRect(rect);
                         }}
-                      />
-                    </div>
-                  </div>
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200 transition-colors hover:bg-zinc-700"
+                      title="Adicionar rastreio"
+                    >
+                      <span className="truncate">Sem rastreio</span>
+                    </button>
+                  )}
 
-                  <div>
-                    <RastreioBadge rastreio={item.rastreios} mode="code" fullWidth className="w-full" />
+                  <div data-status-root={item.id} className="relative flex w-full items-center gap-2">
+                    <button
+                      aria-label="Abrir menu de status"
+                      className="inline-flex min-w-0 flex-1 items-center justify-between gap-2 rounded-full border border-zinc-800 px-4 py-2 text-sm"
+                      onClick={(event) => {
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        setEditingRastreioFor(null);
+                        setRastreioMenuRect(null);
+
+                        if (isStatusOpen) {
+                          setEditingStatusFor(null);
+                          setStatusMenuRect(null);
+                          return;
+                        }
+
+                        setEditingStatusFor(item.id);
+                        setStatusMenuRect(rect);
+                      }}
+                      style={{ backgroundColor: getStatusBadgeStyle(current?.cor).backgroundColor, borderColor: getStatusBadgeStyle(current?.cor).borderColor, color: getStatusBadgeStyle(current?.cor).color }}
+                    >
+                      <span className="min-w-0 truncate text-xs">{current?.nome ?? "Status"}</span>
+                      <ChevronDown className="h-4 w-4 text-zinc-200" />
+                    </button>
                   </div>
                 </div>
 
@@ -274,24 +291,49 @@ export function PedidoCard({ pedido }) {
                     </button>
                   </div>
 
-                  <RastreioBadge 
-                    rastreio={item.rastreios}
-                    onEditClick={(event) => {
-                      const rect = event?.currentTarget?.getBoundingClientRect?.();
-                      if (isRastreioOpen) {
-                        setEditingRastreioFor(null);
-                        setRastreioMenuRect(null);
-                        return;
-                      }
+                  {item.rastreios ? (
+                    <RastreioBadge 
+                      rastreio={item.rastreios}
+                      onEditClick={(event) => {
+                        const rect = event?.currentTarget?.getBoundingClientRect?.();
+                        if (isRastreioOpen) {
+                          setEditingRastreioFor(null);
+                          setRastreioMenuRect(null);
+                          return;
+                        }
 
-                      setEditingRastreioFor(item.id);
-                      setEditingStatusFor(null);
-                      setStatusMenuRect(null);
-                      setRastreioValue(item.rastreios?.codigo_rastreio ?? "");
-                      setRastreioEmGrupo(Boolean(item.rastreios?.rastreio_em_grupo));
-                      if (rect) setRastreioMenuRect(rect);
-                    }}
-                  />
+                        setEditingRastreioFor(item.id);
+                        setEditingStatusFor(null);
+                        setStatusMenuRect(null);
+                        setRastreioValue(item.rastreios?.codigo_rastreio ?? "");
+                        setRastreioEmGrupo(Boolean(item.rastreios?.rastreio_em_grupo));
+                        if (rect) setRastreioMenuRect(rect);
+                      }}
+                    />
+                  ) : (
+                    <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          const rect = event.currentTarget.getBoundingClientRect();
+                          if (isRastreioOpen) {
+                            setEditingRastreioFor(null);
+                            setRastreioMenuRect(null);
+                            return;
+                          }
+
+                          setEditingRastreioFor(item.id);
+                          setEditingStatusFor(null);
+                          setStatusMenuRect(null);
+                          setRastreioValue("");
+                          setRastreioEmGrupo(false);
+                          if (rect) setRastreioMenuRect(rect);
+                        }}
+                      className="inline-flex items-center gap-2 rounded-full border border-zinc-800 px-3 py-1 text-sm"
+                      title="Adicionar rastreio"
+                    >
+                      <span className="truncate">Sem rastreio</span>
+                    </button>
+                  )}
                 </div>
               </div>
 

@@ -28,7 +28,7 @@ export function RastreioBadge({ rastreio, className = "", onEditClick, showCodig
       {renderCodigo ? (
         <button
           onClick={handleCopyCodigo}
-          className={`inline-flex items-center gap-2 rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1 text-sm text-zinc-200 transition-colors hover:bg-zinc-700 ${fullWidth ? "w-full justify-between" : ""}`.trim()}
+          className={`inline-flex items-center gap-2 rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1 text-xs sm:text-sm text-zinc-200 min-w-0 transition-colors hover:bg-zinc-700 ${fullWidth ? "w-full justify-between" : ""}`.trim()}
           title="Copiar código"
         >
           <span className="truncate">{rastreio.codigo_rastreio}</span>

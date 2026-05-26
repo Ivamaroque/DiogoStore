@@ -41,21 +41,6 @@ export function AppSidebar({ pathname }) {
         })}
       </nav>
 
-      <div className="border-t border-zinc-800 p-4">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/15 text-brand">
-              <ShoppingBag className="h-4 w-4" />
-            </div>
-            <div>
-              <div className="text-sm font-medium text-white">
-                <Image src={logoImg} alt="Diogo Store" width={120} height={24} className="object-contain" />
-              </div>
-              <div className="text-xs text-zinc-500">Painel interno</div>
-            </div>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, CalendarDays, CreditCard, Package, PencilLine, Phone, Save, Truck, User } from "lucide-react";
+import { CalendarDays, CreditCard, Package, Phone, Save, Truck, User, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,24 +12,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { FinanceiroResumo } from "./FinanceiroResumo";
 import { StatusBadge } from "./StatusBadge";
 import { RastreioBadge } from "./RastreioBadge";
-import { AtualizarStatusItemDialog } from "./AtualizarStatusItemDialog";
-import { atualizarRastreioItem } from "@/services/itensPedidoService";
+import { atualizarRastreioItem, atualizarStatusItem } from "@/services/itensPedidoService";
 import { obterOuCriarRastreio } from "@/services/rastreiosService";
+import { STATUS_FIXOS, getStatusBadgeStyle } from "@/lib/constants/status";
 import { formatCurrency } from "@/utils/currency";
 import { formatDateTime } from "@/utils/dates";
 
 export function PedidoDetalhes({ pedidoInicial, statusItens }) {
   const [pedido, setPedido] = useState(pedidoInicial);
+  const [editingStatusFor, setEditingStatusFor] = useState(null);
   const [rastreioAbertoId, setRastreioAbertoId] = useState(null);
   const [rastreioCodigo, setRastreioCodigo] = useState("");
   const [rastreioEmGrupo, setRastreioEmGrupo] = useState(false);
   const [salvandoRastreio, setSalvandoRastreio] = useState(false);
+  const [statusMap, setStatusMap] = useState({});
 
-  const financeiros = useMemo(() => ({
-    valorTotal: Number(pedido?.valor_total || 0),
-    valorPago: Number(pedido?.valor_pago || 0),
-    valorRestante: Number(pedido?.valor_restante || 0),
-  }), [pedido]);
+  const financeiros = useMemo(
+    () => ({
+      valorTotal: Number(pedido?.valor_total || 0),
+      valorPago: Number(pedido?.valor_pago || 0),
+      valorRestante: Number(pedido?.valor_restante || 0),
+    }),
+    [pedido],
+  );
 
   async function salvarRastreio(itemId) {
     setSalvandoRastreio(true);
@@ -52,13 +57,6 @@ export function PedidoDetalhes({ pedidoInicial, statusItens }) {
     }
   }
 
-  function onStatusUpdated(itemAtualizado) {
-    setPedido((current) => ({
-      ...current,
-      itens_pedido: current.itens_pedido.map((item) => (item.id === itemAtualizado.id ? { ...item, ...itemAtualizado } : item)),
-    }));
-  }
-
   if (!pedido) return null;
 
   return (
@@ -76,7 +74,6 @@ export function PedidoDetalhes({ pedidoInicial, statusItens }) {
             <div className="flex items-center justify-between gap-4"><span>Telefone</span><span className="font-medium text-white">{pedido.telefone || "—"}</span></div>
             <div className="flex items-center justify-between gap-4"><span>Criado em</span><span className="font-medium text-white">{formatDateTime(pedido.criado_em)}</span></div>
             <div className="flex items-center justify-between gap-4"><span>Funcionário</span><span className="font-medium text-white">{pedido.perfis?.nome_completo || "—"}</span></div>
-            <div className="flex items-center justify-between gap-4"><span>Função</span><span className="font-medium text-white">{pedido.perfis?.funcao || "—"}</span></div>
           </CardContent>
         </Card>
 
@@ -107,7 +104,7 @@ export function PedidoDetalhes({ pedidoInicial, statusItens }) {
         <CardContent className="space-y-4">
           {pedido.itens_pedido?.length ? (
             pedido.itens_pedido.map((item) => (
-              <div key={item.id} className="rounded-3xl border border-zinc-800 bg-zinc-950 p-5">
+              <div key={item.id} className="relative rounded-3xl border border-zinc-800 bg-zinc-950 p-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
@@ -119,19 +116,66 @@ export function PedidoDetalhes({ pedidoInicial, statusItens }) {
                       <p>Tamanho: <span className="text-white">{item.tamanho || "—"}</span></p>
                       <p>Status: <span className="text-white">{item.status_itens?.nome || "—"}</span></p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 lg:hidden">
                       <StatusBadge status={item.status_itens} />
                       <RastreioBadge rastreio={item.rastreios} />
-                      {item.status_itens?.cor ? <Badge variant="default">Cor: {item.status_itens.cor}</Badge> : null}
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    <AtualizarStatusItemDialog item={item} statusItens={statusItens} onUpdated={onStatusUpdated} />
-                    <Button variant="outline" size="sm" onClick={() => { setRastreioAbertoId((current) => (current === item.id ? null : item.id)); setRastreioCodigo(item.rastreios?.codigo_rastreio ?? ""); setRastreioEmGrupo(Boolean(item.rastreios?.rastreio_em_grupo)); }}>
-                      <Truck className="h-4 w-4" />
-                      Rastreio
-                    </Button>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {/* Inline status button + dropdown (stays on page) */}
+                    <div className="relative">
+                      <button
+                        aria-label="Abrir menu de status"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (editingStatusFor === item.id) {
+                            setEditingStatusFor(null);
+                            return;
+                          }
+
+                          setEditingStatusFor(item.id);
+                        }}
+                        className="inline-flex items-center gap-2 rounded-full border border-zinc-800 px-3 py-1 text-sm"
+                        style={{ backgroundColor: getStatusBadgeStyle(item.status_itens?.cor).backgroundColor, borderColor: getStatusBadgeStyle(item.status_itens?.cor).borderColor, color: getStatusBadgeStyle(item.status_itens?.cor).color }}
+                      >
+                        <span className="text-xs">{item.status_itens?.nome || "Status"}</span>
+                        <ChevronDown className="h-4 w-4 text-zinc-200" />
+                      </button>
+
+                      {editingStatusFor === item.id ? (
+                        <div className="absolute right-0 z-50 mt-2 w-64 rounded-xl border border-zinc-800 bg-zinc-950 p-2 shadow-2xl">
+                          <div className="max-h-60 overflow-auto">
+                            {STATUS_FIXOS.map((s) => (
+                              <button
+                                key={s.id}
+                                className={"flex w-full items-start justify-between gap-3 rounded-md px-3 py-2 text-left text-sm " + (String(s.id) === String(item.status_item_id) ? "bg-zinc-900 text-white" : "text-zinc-300 hover:bg-zinc-900")}
+                                onClick={async () => {
+                                  try {
+                                    const atualizado = await atualizarStatusItem({ itemId: item.id, status_item_id: Number(s.id) });
+                                    setPedido((current) => ({
+                                      ...current,
+                                      itens_pedido: current.itens_pedido.map((it) => (it.id === item.id ? { ...it, ...atualizado } : it)),
+                                    }));
+                                    toast.success("Status atualizado.");
+                                  } catch (e) {
+                                    toast.error("Não foi possível atualizar o status.");
+                                  } finally {
+                                    setEditingStatusFor(null);
+                                  }
+                                }}
+                              >
+                                <span className="min-w-0 flex-1">{s.nome}</span>
+                                <span className="max-w-44 text-xs leading-5 text-zinc-500">{s.descricao}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {/* Rastreio inline editor trigger */}
+                    <RastreioBadge rastreio={item.rastreios} onEditClick={() => { setRastreioAbertoId((current) => (current === item.id ? null : item.id)); setRastreioCodigo(item.rastreios?.codigo_rastreio ?? ""); setRastreioEmGrupo(Boolean(item.rastreios?.rastreio_em_grupo)); }} />
                   </div>
                 </div>
 
