@@ -10,7 +10,7 @@ import { getStatusPorId } from "@/lib/constants/status";
 
 const tipos = ["Infantil", "Feminina", "Masculina"];
 
-export function ItemPedidoForm({ item, onChange, onAdicionar }) {
+export function ItemPedidoForm({ item, onChange, onAdicionar, showStatusBadge = true }) {
   const statusInicial = getStatusPorId(item.status_item_id ?? 1);
 
   function updateField(field, value) {
@@ -24,7 +24,7 @@ export function ItemPedidoForm({ item, onChange, onAdicionar }) {
           <h3 className="text-base font-semibold text-white">Novo item</h3>
           <p className="text-sm text-zinc-500">Cada item começa em “Pedido realizado”.</p>
         </div>
-        <StatusBadge status={statusInicial} />
+        {showStatusBadge ? <StatusBadge status={statusInicial} /> : null}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -71,7 +71,7 @@ export function ItemPedidoForm({ item, onChange, onAdicionar }) {
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-3">
-        <Button type="button" onClick={onAdicionar} className="gap-2">
+        <Button type="button" onClick={onAdicionar} className="w-full gap-2 sm:w-auto">
           <Plus className="h-4 w-4" />
           Adicionar item
         </Button>

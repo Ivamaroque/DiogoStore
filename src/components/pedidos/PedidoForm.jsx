@@ -133,7 +133,7 @@ export function PedidoForm() {
               </div>
             </div>
 
-            <ItemPedidoForm item={itemAtual} onChange={setItemAtual} onAdicionar={adicionarItem} />
+            <ItemPedidoForm item={itemAtual} onChange={setItemAtual} onAdicionar={adicionarItem} showStatusBadge={false} />
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -171,7 +171,7 @@ export function PedidoForm() {
         </Card>
 
         <div className="space-y-6">
-          <FinanceiroResumo valorTotal={valorTotalNumerico} valorPago={valorPagoNumerico} valorRestante={valorRestante} />
+          <FinanceiroResumo valorTotal={valorTotalNumerico} valorPago={valorPagoNumerico} valorRestante={valorRestante} showStatusBadge={false} />
 
           <Card className="border-zinc-800 bg-zinc-900/95">
             <CardHeader>
