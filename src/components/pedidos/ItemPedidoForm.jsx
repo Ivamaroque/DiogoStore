@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "./StatusBadge";
 import { getStatusPorId } from "@/lib/constants/status";
 
@@ -61,19 +59,6 @@ export function ItemPedidoForm({ item, onChange, onAdicionar }) {
           <Input value={item.tamanho} onChange={(event) => updateField("tamanho", event.target.value)} placeholder="M, G, 42..." />
         </div>
 
-        <div className="space-y-2">
-          <Label>Código de rastreio</Label>
-          <Input value={item.codigo_rastreio} onChange={(event) => updateField("codigo_rastreio", event.target.value)} placeholder="Opcional" />
-        </div>
-
-        <div className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 md:col-span-2">
-          <div>
-            <p className="text-sm font-medium text-white">Rastreio em grupo</p>
-            <p className="text-xs text-zinc-500">Usado quando vários itens compartilham o mesmo código.</p>
-          </div>
-          <Switch checked={item.rastreio_em_grupo} onCheckedChange={(checked) => updateField("rastreio_em_grupo", checked)} />
-        </div>
-
         <div className="space-y-2 md:col-span-2">
           <Label>Personalização</Label>
           <Textarea value={item.personalizacao} onChange={(event) => updateField("personalizacao", event.target.value)} placeholder="Detalhes da arte, nome, cor..." />
@@ -85,10 +70,7 @@ export function ItemPedidoForm({ item, onChange, onAdicionar }) {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-xs text-zinc-500">
-          Se o código já existir no banco, o sistema reutiliza o rastreio.
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <Button type="button" onClick={onAdicionar} className="gap-2">
           <Plus className="h-4 w-4" />
           Adicionar item

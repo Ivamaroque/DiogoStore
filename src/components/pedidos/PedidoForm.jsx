@@ -15,7 +15,6 @@ import { ItemPedidoForm } from "./ItemPedidoForm";
 import { criarPedidoCompleto } from "@/services/pedidosService";
 import { currencyMask, parseCurrency } from "@/utils/currency";
 import { formatPhone } from "@/utils/masks";
-import { RastreioBadge } from "./RastreioBadge";
 import { StatusBadge } from "./StatusBadge";
 import { formatCurrency } from "@/utils/currency";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -26,8 +25,6 @@ const itemPadrao = {
   tipo: "",
   tamanho: "",
   personalizacao: "",
-  codigo_rastreio: "",
-  rastreio_em_grupo: false,
   observacao_status: "",
   status_item_id: 1,
 };
@@ -39,7 +36,7 @@ export function PedidoForm() {
   const [telefone, setTelefone] = useState("");
   const [valorTotal, setValorTotal] = useState("");
   const [valorPago, setValorPago] = useState("");
-  const [formaPagamento, setFormaPagamento] = useState("À vista");
+  const [formaPagamento, setFormaPagamento] = useState("Pix");
   const [itens, setItens] = useState([]);
   const [itemAtual, setItemAtual] = useState(itemPadrao);
   const [salvando, setSalvando] = useState(false);
@@ -163,7 +160,6 @@ export function PedidoForm() {
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <StatusBadge status={1} />
-                        <RastreioBadge rastreio={item.codigo_rastreio ? { codigo_rastreio: item.codigo_rastreio, rastreio_em_grupo: item.rastreio_em_grupo } : null} />
                         {item.personalizacao ? <Badge variant="default">Personalização adicionada</Badge> : null}
                       </div>
                     </div>
@@ -198,12 +194,10 @@ export function PedidoForm() {
                   className="flex h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
                 >
                   {[
-                    "À vista",
-                    "50% na encomenda e 50% na entrega",
                     "Pix",
                     "Dinheiro",
-                    "Cartão",
-                    "Outro",
+                    "Débito",
+                    "Crédito",
                   ].map((opcao) => (
                     <option key={opcao} value={opcao}>{opcao}</option>
                   ))}

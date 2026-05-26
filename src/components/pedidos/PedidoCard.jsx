@@ -196,9 +196,16 @@ export function PedidoCard({ pedido }) {
                 </div>
 
                 <div data-rastreio-root={item.id} className="relative flex items-center gap-2">
-                  <div onClick={() => setEditingRastreioFor((cur) => (cur === item.id ? null : item.id))} className="cursor-pointer">
-                    <RastreioBadge rastreio={item.rastreios} />
-                  </div>
+                  <RastreioBadge 
+                    rastreio={item.rastreios}
+                    onEditClick={() => {
+                      setEditingRastreioFor((cur) => (cur === item.id ? null : item.id));
+                      if (editingRastreioFor !== item.id) {
+                        setRastreioValue(item.rastreios?.codigo_rastreio ?? "");
+                        setRastreioEmGrupo(Boolean(item.rastreios?.rastreio_em_grupo));
+                      }
+                    }}
+                  />
 
                   {editingRastreioFor === item.id ? (
                     <div className="absolute right-0 z-40 mt-10 w-80 rounded-xl border border-zinc-800 bg-zinc-950 p-4 shadow-lg">
