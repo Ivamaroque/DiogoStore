@@ -19,7 +19,7 @@ import { STATUS_FIXOS } from "@/lib/constants/status";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 
-export function PedidoCard({ pedido }) {
+export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
   const router = useRouter();
   const [editingStatusFor, setEditingStatusFor] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState("");
@@ -200,7 +200,9 @@ export function PedidoCard({ pedido }) {
                 <div className="grid w-full gap-3 sm:hidden">
                   {item.rastreios ? (
                     <RastreioBadge
+                      item={item}
                       rastreio={item.rastreios}
+                      contagemPorRastreio={contagemPorRastreio}
                       fullWidth
                       onEditClick={(event) => {
                         const rect = event?.currentTarget?.getBoundingClientRect?.();
@@ -297,7 +299,9 @@ export function PedidoCard({ pedido }) {
 
                   {item.rastreios ? (
                     <RastreioBadge 
+                      item={item}
                       rastreio={item.rastreios}
+                      contagemPorRastreio={contagemPorRastreio}
                       onEditClick={(event) => {
                         const rect = event?.currentTarget?.getBoundingClientRect?.();
                         if (isRastreioOpen) {
@@ -384,7 +388,6 @@ export function PedidoCard({ pedido }) {
                   <div className="space-y-3">
                     <label className="text-sm text-zinc-300">Código de rastreio</label>
                     <Input value={rastreioValue} onChange={(e) => setRastreioValue(e.target.value)} placeholder="Código de rastreio" />
-                    <label className="flex items-center gap-2 text-sm text-zinc-400"><input type="checkbox" checked={rastreioEmGrupo} onChange={(e) => setRastreioEmGrupo(e.target.checked)} className="h-4 w-4 accent-brand" /> Rastreio em conjunto</label>
                     <div className="flex justify-end gap-2">
                       <Button variant="outline" size="sm" onClick={() => {
                         setEditingRastreioFor(null);

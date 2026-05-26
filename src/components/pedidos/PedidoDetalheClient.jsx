@@ -1,13 +1,38 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { usePedidoPorId } from "@/hooks/usePedidoPorId";
 import { useStatusItens } from "@/hooks/useStatusItens";
 import { PedidoDetalhes } from "./PedidoDetalhes";
+import { contarUsoRastreios, sincronizarRastreiosEmGrupo } from "@/services/rastreiosService";
 
 export function PedidoDetalheClient({ pedidoId }) {
   const { pedido, carregando, erro } = usePedidoPorId(pedidoId);
   const { statusItens } = useStatusItens();
+  const [contagemPorRastreio, setContagemPorRastreio] = useState({});
+
+  useEffect(() => {
+    let ativo = true;
+
+    async function carregarContagem() {
+      try {
+        const contagem = await contarUsoRastreios();
+        if (!ativo) return;
+        setContagemPorRastreio(contagem);
+        void sincronizarRastreiosEmGrupo(contagem).catch(() => {});
+      } catch {
+        if (!ativo) return;
+        setContagemPorRastreio({});
+      }
+    }
+
+    void carregarContagem();
+
+    return () => {
+      ativo = false;
+    };
+  }, [pedidoId]);
 
   return (
     <AppShell>
@@ -26,7 +51,7 @@ export function PedidoDetalheClient({ pedidoId }) {
         {carregando ? (
           <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-8 text-sm text-zinc-400">Carregando pedido...</div>
         ) : (
-          <PedidoDetalhes pedidoInicial={pedido} statusItens={statusItens} />
+          <PedidoDetalhes pedidoInicial={pedido} statusItens={statusItens} contagemPorRastreio={contagemPorRastreio} />
         )}
       </div>
     </AppShell>

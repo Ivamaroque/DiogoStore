@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2, RefreshCcw, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { usePedidos } from "@/hooks/usePedidos";
 import { PedidoCard } from "./PedidoCard";
+import { contarItensPorRastreio } from "@/utils/rastreios";
+import { sincronizarRastreiosEmGrupo } from "@/services/rastreiosService";
 
 export function ListaPedidos({ statusItens = [] }) {
   const [termo, setTermo] = useState("");
@@ -35,6 +37,11 @@ export function ListaPedidos({ statusItens = [] }) {
   }), [termo, filtroAtivo]);
 
   const { pedidos, carregando, erro, recarregar } = usePedidos(filtros);
+  const contagemPorRastreio = useMemo(() => contarItensPorRastreio(pedidos), [pedidos]);
+
+  useEffect(() => {
+    void sincronizarRastreiosEmGrupo(contagemPorRastreio).catch(() => {});
+  }, [contagemPorRastreio]);
 
   const filtrosRapidos = [
     { id: "todos", label: "Todos" },
@@ -108,7 +115,7 @@ export function ListaPedidos({ statusItens = [] }) {
       ) : pedidos.length ? (
         <div className="space-y-4">
           {pedidos.map((pedido) => (
-            <PedidoCard key={pedido.id} pedido={pedido} />
+            <PedidoCard key={pedido.id} pedido={pedido} contagemPorRastreio={contagemPorRastreio} />
           ))}
         </div>
       ) : (

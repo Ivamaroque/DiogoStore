@@ -18,7 +18,7 @@ import { STATUS_FIXOS, getStatusBadgeStyle } from "@/lib/constants/status";
 import { formatCurrency } from "@/utils/currency";
 import { formatDateTime } from "@/utils/dates";
 
-export function PedidoDetalhes({ pedidoInicial, statusItens }) {
+export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio = {} }) {
   const [pedido, setPedido] = useState(pedidoInicial);
   const [editingStatusFor, setEditingStatusFor] = useState(null);
   const [rastreioAbertoId, setRastreioAbertoId] = useState(null);
@@ -118,7 +118,7 @@ export function PedidoDetalhes({ pedidoInicial, statusItens }) {
                     </div>
                     <div className="flex flex-wrap gap-2 lg:hidden">
                       <StatusBadge status={item.status_itens} />
-                      <RastreioBadge rastreio={item.rastreios} />
+                      <RastreioBadge item={item} rastreio={item.rastreios} contagemPorRastreio={contagemPorRastreio} />
                     </div>
                   </div>
 
@@ -175,7 +175,7 @@ export function PedidoDetalhes({ pedidoInicial, statusItens }) {
                     </div>
 
                     {/* Rastreio inline editor trigger */}
-                    <RastreioBadge rastreio={item.rastreios} onEditClick={() => { setRastreioAbertoId((current) => (current === item.id ? null : item.id)); setRastreioCodigo(item.rastreios?.codigo_rastreio ?? ""); setRastreioEmGrupo(Boolean(item.rastreios?.rastreio_em_grupo)); }} />
+                    <RastreioBadge item={item} rastreio={item.rastreios} contagemPorRastreio={contagemPorRastreio} onEditClick={() => { setRastreioAbertoId((current) => (current === item.id ? null : item.id)); setRastreioCodigo(item.rastreios?.codigo_rastreio ?? ""); setRastreioEmGrupo(Boolean(item.rastreios?.rastreio_em_grupo)); }} />
                   </div>
                 </div>
 
