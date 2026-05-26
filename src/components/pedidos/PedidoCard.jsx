@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 
 export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
   const router = useRouter();
+  const [pedidoLocal, setPedidoLocal] = useState(pedido);
   const [editingStatusFor, setEditingStatusFor] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState("");
   const [statusMap, setStatusMap] = useState({});
@@ -30,6 +31,10 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
   const [rastreioEmGrupo, setRastreioEmGrupo] = useState(false);
   const [rastreioMenuRect, setRastreioMenuRect] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setPedidoLocal(pedido);
+  }, [pedido]);
 
   function getMenuPlacement(rect, width, height) {
     const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 0;
@@ -65,9 +70,29 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
     try {
       setSaving(true);
       const rastreio = await obterOuCriarRastreio({ codigo_rastreio: rastreioValue, rastreio_em_grupo: rastreioEmGrupo });
-      await atualizarRastreioItem({ itemId: item.id, rastreio_id: rastreio?.id ?? null });
+      const itemAtualizado = await atualizarRastreioItem({ itemId: item.id, rastreio_id: rastreio?.id ?? null });
+
+      setPedidoLocal((current) => ({
+        ...current,
+        itens_pedido: (current.itens_pedido ?? []).map((currentItem) =>
+          currentItem.id === item.id
+            ? {
+                ...currentItem,
+                ...itemAtualizado,
+                rastreio_id: itemAtualizado?.rastreio_id ?? rastreio?.id ?? null,
+                rastreios: rastreio,
+              }
+            : currentItem,
+        ),
+      }));
+
       setEditingRastreioFor(null);
+      setRastreioMenuRect(null);
+      setRastreioValue("");
       router.refresh();
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.message || "Não foi possível atualizar o rastreio.");
     } finally {
       setSaving(false);
     }
@@ -137,8 +162,8 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
               </div>
 
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-400">
-                <span className="flex items-center gap-2"><Phone className="h-4 w-4 text-zinc-500" />{pedido.telefone || "Sem telefone"}</span>
-                <span className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-zinc-500" />{formatDateTime(pedido.criado_em)}</span>
+                <span className="flex items-center gap-2"><Phone className="h-4 w-4 text-zinc-500" />{pedidoLocal.telefone || "Sem telefone"}</span>
+                <span className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-zinc-500" />{formatDateTime(pedidoLocal.criado_em)}</span>
                 {/* <span className="flex items-center gap-2">ID #{pedido.id}</span> */}
               </div>
             </div>
@@ -147,15 +172,15 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
           <div className="grid min-w-[280px] grid-cols-3 gap-3 text-right">
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">Total</p>
-              <p className="mt-2 text-xl font-semibold text-brand">{formatCurrency(pedido.valor_total)}</p>
+              <p className="mt-2 text-xl font-semibold text-brand">{formatCurrency(pedidoLocal.valor_total)}</p>
             </div>
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">Pago</p>
-              <p className="mt-2 text-xl font-semibold text-emerald-400">{formatCurrency(pedido.valor_pago)}</p>
+              <p className="mt-2 text-xl font-semibold text-emerald-400">{formatCurrency(pedidoLocal.valor_pago)}</p>
             </div>
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">Restante</p>
-              <p className="mt-2 text-xl font-semibold text-rose-400">{formatCurrency(Math.max(pedido.valor_restante, 0))}</p>
+              <p className="mt-2 text-xl font-semibold text-rose-400">{formatCurrency(Math.max(pedidoLocal.valor_restante, 0))}</p>
             </div>
           </div>
         </div>
@@ -168,7 +193,7 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
         </div>
 
         <div className="space-y-3">
-          {pedido.itens_pedido?.map((item) => (
+          {pedidoLocal.itens_pedido?.map((item) => (
             (() => {
               const current = statusMap[item.id] ?? item.status_itens;
               const isStatusOpen = editingStatusFor === item.id;
@@ -410,16 +435,16 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
         <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-400">
           <span className="flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-zinc-300">
             <Clock3 className="h-4 w-4 text-zinc-500" />
-            {pedido.forma_pagamento || "Não informado"}
+            {pedidoLocal.forma_pagamento || "Não informado"}
           </span>
           <span className="flex items-center gap-2 text-zinc-500">
-            <User className="h-4 w-4" /> {pedido.perfis?.nome_completo || "—"}
+            <User className="h-4 w-4" /> {pedidoLocal.perfis?.nome_completo || "—"}
           </span>
         </div>
 
         <div className="flex items-center gap-3">
           <Button asChild size="sm" className="gap-2 rounded-xl px-4">
-            <Link href={`/pedidos/${pedido.id}`}>
+            <Link href={`/pedidos/${pedidoLocal.id}`}>
               Ver detalhes
               <ArrowUpRight className="h-4 w-4" />
             </Link>

@@ -9,8 +9,6 @@ export async function buscarRastreioPorCodigo(codigoRastreio, supabase = getSupa
     .from("rastreios")
     .select("*")
     .eq("codigo_rastreio", codigo)
-    .order("criado_em", { ascending: false })
-    .limit(1)
     .maybeSingle();
   if (error) throw error;
 
@@ -41,7 +39,15 @@ export async function obterOuCriarRastreio({ codigo_rastreio, rastreio_em_grupo 
       return existente;
     }
 
-    return criarRastreio({ codigo_rastreio: codigo, rastreio_em_grupo }, supabase);
+    const { data, error } = await supabase
+      .from("rastreios")
+      .update({ rastreio_em_grupo: Boolean(rastreio_em_grupo) })
+      .eq("id", existente.id)
+      .select("*")
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
   return criarRastreio({ codigo_rastreio: codigo, rastreio_em_grupo }, supabase);

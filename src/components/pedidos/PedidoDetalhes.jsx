@@ -52,7 +52,8 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
       setRastreioAbertoId(null);
       setRastreioCodigo("");
     } catch (error) {
-      toast.error(error?.message || "Não foi possível atualizar o rastreio.");
+      const mensagemErro = error instanceof Error ? error.message : typeof error === "string" ? error : error?.message || JSON.stringify(error);
+      toast.error(mensagemErro || "Não foi possível atualizar o rastreio.");
     } finally {
       setSalvandoRastreio(false);
     }
