@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarDays, CreditCard, Package, Phone, Save, Truck, User, ChevronDown } from "lucide-react";
+import { CalendarDays, CreditCard, Package, Phone, Save, Truck, User, ChevronDown, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import { obterOuCriarRastreio } from "@/services/rastreiosService";
 import { STATUS_FIXOS, getStatusBadgeStyle } from "@/lib/constants/status";
 import { formatCurrency } from "@/utils/currency";
 import { formatDateTime } from "@/utils/dates";
+import { gerarTextoPedidoWhatsApp } from "@/utils/gerarTextoPedido";
 
 export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio = {} }) {
   const [pedido, setPedido] = useState(pedidoInicial);
@@ -57,10 +58,31 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
     }
   }
 
+  async function copiarTextoPedido() {
+    try {
+      const texto = gerarTextoPedidoWhatsApp(pedido);
+      await navigator.clipboard.writeText(texto);
+      toast.success("Texto da encomenda copiado!");
+    } catch (error) {
+      console.error(error);
+      toast.error("Não foi possível copiar o texto.");
+    }
+  }
+
   if (!pedido) return null;
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-end">
+        <Button
+          type="button"
+          onClick={copiarTextoPedido}
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl border border-[#ed6f1a]/40 bg-[#ed6f1a]/10 px-4 py-3 text-sm font-bold text-[#ed6f1a] transition hover:bg-[#ed6f1a] hover:text-white"
+        >
+          <Copy size={18} />
+          Copiar encomenda
+        </Button>
+      </div>
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <Card className="border-zinc-800 bg-zinc-900/95">
           <CardHeader>
@@ -122,7 +144,7 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 items-center">
+                  <div className="hidden lg:flex flex-wrap gap-2 items-center">
                     {/* Inline status button + dropdown (stays on page) */}
                     <div className="relative">
                       <button
