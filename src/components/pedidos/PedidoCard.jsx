@@ -84,7 +84,9 @@ export function PedidoCard({ pedido }) {
 
       if (editingStatusFor !== null) {
         const statusRoot = document.querySelector(`[data-status-root="${editingStatusFor}"]`);
+        const statusPortal = document.querySelector(`[data-status-portal="${editingStatusFor}"]`);
         if (statusRoot && !statusRoot.contains(target)) {
+          if (statusPortal && statusPortal.contains(target)) return;
           setEditingStatusFor(null);
           setStatusMenuRect(null);
         }
@@ -92,7 +94,9 @@ export function PedidoCard({ pedido }) {
 
       if (editingRastreioFor !== null) {
         const rastreioRoot = document.querySelector(`[data-rastreio-root="${editingRastreioFor}"]`);
+        const rastreioPortal = document.querySelector(`[data-rastreio-portal="${editingRastreioFor}"]`);
         if (rastreioRoot && !rastreioRoot.contains(target)) {
+          if (rastreioPortal && rastreioPortal.contains(target)) return;
           setEditingRastreioFor(null);
           setRastreioMenuRect(null);
         }
@@ -339,6 +343,7 @@ export function PedidoCard({ pedido }) {
 
               {typeof document !== "undefined" && isStatusOpen && statusMenuRect ? createPortal(
                 <div
+                  data-status-portal={item.id}
                   className="fixed z-[60] rounded-xl border border-zinc-800 bg-zinc-950 p-2 shadow-2xl shadow-black/50"
                   style={getMenuPlacement(statusMenuRect, 320, 360)}
                 >
@@ -349,10 +354,12 @@ export function PedidoCard({ pedido }) {
                         className={"flex w-full items-start justify-between gap-3 rounded-md px-3 py-2 text-left text-sm " + (String(s.id) === String(current?.id ?? item.status_item_id) ? "bg-zinc-900 text-white" : "text-zinc-300 hover:bg-zinc-900")}
                         onClick={async () => {
                           try {
-                            await atualizarStatusItem({ itemId: item.id, status_item_id: Number(s.id) });
+                            const atualizado = await atualizarStatusItem({ itemId: item.id, status_item_id: Number(s.id) });
                             setStatusMap((m) => ({ ...m, [item.id]: s }));
+                            toast.success("Status atualizado.");
                           } catch (e) {
-                            // ignore, server will have authoritative state
+                            console.error("Erro ao atualizar status:", e);
+                            toast.error(e?.message || "Não foi possível atualizar o status.");
                           } finally {
                             setEditingStatusFor(null);
                             setStatusMenuRect(null);
@@ -370,6 +377,7 @@ export function PedidoCard({ pedido }) {
 
               {typeof document !== "undefined" && isRastreioOpen && rastreioMenuRect ? createPortal(
                 <div
+                  data-rastreio-portal={item.id}
                   className="fixed z-[60] rounded-xl border border-zinc-800 bg-zinc-950 p-4 shadow-2xl shadow-black/50"
                   style={getMenuPlacement(rastreioMenuRect, 352, 240)}
                 >
