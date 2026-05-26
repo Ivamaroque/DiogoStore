@@ -1,54 +1,49 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
-export async function listarFuncionarios(supabase = getSupabaseBrowserClient()) {
+export async function listarFuncionarios() {
+  const supabase = getSupabaseBrowserClient();
+
   const { data, error } = await supabase
     .from("perfis")
     .select("id, nome_completo, funcao, usuario, email, criado_em")
     .order("criado_em", { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(error.message || "Erro ao listar funcionários.");
+  }
+
   return data ?? [];
 }
 
-export async function criarFuncionario({ nome_completo, funcao, usuario, email, senha }, supabase = getSupabaseBrowserClient()) {
-  const emailLimpo = String(email ?? "").trim();
-  const usuarioLimpo = String(usuario ?? "").trim();
+export async function criarFuncionario({
+  nome_completo,
+  funcao,
+  usuario,
+  email,
+  password,
+}) {
+  const supabase = getSupabaseBrowserClient();
 
-  const { data: authData, error: signUpError } = await supabase.auth.signUp({
-    email: emailLimpo,
-    password: senha,
-    options: {
-      data: {
-        nome_completo,
-        funcao,
-        usuario: usuarioLimpo,
-      },
+  const funcoesValidas = ["Funcionário", "Gestor"];
+  const funcaoNormalizada = funcoesValidas.includes(funcao) ? funcao : "Funcionário";
+
+  const { data, error } = await supabase.functions.invoke("criar-funcionario", {
+    body: {
+      nome_completo,
+      funcao: funcaoNormalizada,
+      usuario,
+      email,
+      password,
     },
   });
 
-  if (signUpError) throw signUpError;
-
-  const userId = authData.user?.id;
-  if (!userId) {
-    throw new Error("Não foi possível criar o funcionário.");
+  if (error) {
+    throw new Error(error.message || "Erro ao criar funcionário.");
   }
 
-  const { data, error } = await supabase
-    .from("perfis")
-    .upsert(
-      {
-        id: userId,
-        nome_completo,
-        funcao,
-        usuario: usuarioLimpo,
-        email: emailLimpo,
-      },
-      { onConflict: "id" },
-    )
-    .select("id, nome_completo, funcao, usuario, email, criado_em")
-    .single();
-
-  if (error) throw error;
+  if (data?.error) {
+    throw new Error(data.error);
+  }
 
   return data;
 }

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { criarFuncionario, listarFuncionarios } from "@/services/funcionariosService";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { formatDateTime } from "@/utils/dates";
 
 const formInicial = {
@@ -16,14 +17,39 @@ const formInicial = {
   funcao: "Funcionário",
   usuario: "",
   email: "",
-  senha: "",
+  password: "",
 };
+
+function validarFormulario(form) {
+  if (!form.nome_completo.trim()) {
+    throw new Error("Informe o nome completo.");
+  }
+
+  const funcoesValidas = ["Funcionário", "Gestor"];
+  if (!form.funcao || !funcoesValidas.includes(form.funcao)) {
+    throw new Error("Informe a função válida.");
+  }
+
+  if (!form.usuario.trim()) {
+    throw new Error("Informe o usuário.");
+  }
+
+  if (!form.email.trim()) {
+    throw new Error("Informe o e-mail.");
+  }
+
+  if (!form.password || form.password.length < 6) {
+    throw new Error("A senha precisa ter pelo menos 6 caracteres.");
+  }
+}
 
 export function FuncionariosManager() {
   const [form, setForm] = useState(formInicial);
   const [funcionarios, setFuncionarios] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState("");
+  const [sucesso, setSucesso] = useState("");
 
   async function carregar() {
     setCarregando(true);
@@ -31,7 +57,9 @@ export function FuncionariosManager() {
       const dados = await listarFuncionarios();
       setFuncionarios(dados);
     } catch (error) {
-      toast.error(error?.message || "Não foi possível carregar os funcionários.");
+      const mensagem = error?.message || "Não foi possível carregar os funcionários.";
+      setErro(mensagem);
+      toast.error(mensagem);
     } finally {
       setCarregando(false);
     }
@@ -41,22 +69,50 @@ export function FuncionariosManager() {
     void carregar();
   }, []);
 
-  async function handleSubmit(event) {
-    event.preventDefault();
-
-    if (!form.nome_completo.trim() || !form.usuario.trim() || !form.email.trim() || !form.senha.trim()) {
-      toast.error("Preencha nome, usuário, e-mail e senha.");
+  useEffect(() => {
+    if (!sucesso) {
       return;
     }
 
-    setSalvando(true);
+    const timer = window.setTimeout(() => setSucesso(""), 4000);
+    return () => window.clearTimeout(timer);
+  }, [sucesso]);
+
+  useEffect(() => {
+    if (!erro) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setErro(""), 6000);
+    return () => window.clearTimeout(timer);
+  }, [erro]);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
     try {
-      await criarFuncionario(form);
-      toast.success("Funcionário criado com sucesso.");
+      setSalvando(true);
+      setErro("");
+      setSucesso("");
+
+      validarFormulario(form);
+
+      await criarFuncionario({
+        nome_completo: form.nome_completo.trim(),
+        funcao: form.funcao.trim(),
+        usuario: form.usuario.trim().toLowerCase(),
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+      });
+
       setForm(formInicial);
       await carregar();
+      setSucesso("Funcionário criado com sucesso.");
+      toast.success("Funcionário criado com sucesso.");
     } catch (error) {
-      toast.error(error?.message || "Não foi possível criar o funcionário.");
+      const mensagem = error?.message || "Erro ao criar funcionário.";
+      setErro(mensagem);
+      toast.error(mensagem);
     } finally {
       setSalvando(false);
     }
@@ -71,27 +127,71 @@ export function FuncionariosManager() {
             Criar funcionário
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {erro ? (
+            <div className="rounded-2xl border border-red-900/60 bg-red-950/60 px-4 py-3 text-sm text-red-200">
+              {erro}
+            </div>
+          ) : null}
+
+          {sucesso ? (
+            <div className="rounded-2xl border border-emerald-900/60 bg-emerald-950/60 px-4 py-3 text-sm text-emerald-200">
+              {sucesso}
+            </div>
+          ) : null}
+
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
-              <Label>Nome completo</Label>
-              <Input value={form.nome_completo} onChange={(event) => setForm((current) => ({ ...current, nome_completo: event.target.value }))} />
+              <Label htmlFor="nome-completo">Nome completo</Label>
+              <Input
+                id="nome-completo"
+                value={form.nome_completo}
+                onChange={(event) => setForm((current) => ({ ...current, nome_completo: event.target.value }))}
+              />
             </div>
             <div className="space-y-2">
-              <Label>Função</Label>
-              <Input value={form.funcao} onChange={(event) => setForm((current) => ({ ...current, funcao: event.target.value }))} />
+              <Label htmlFor="funcao">Função</Label>
+              <Select
+                value={form.funcao}
+                onValueChange={(value) => setForm((current) => ({ ...current, funcao: value }))}
+              >
+                <SelectTrigger id="funcao">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Funcionário">Funcionário</SelectItem>
+                  <SelectItem value="Gestor">Gestor</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
-              <Label>Usuário</Label>
-              <Input value={form.usuario} onChange={(event) => setForm((current) => ({ ...current, usuario: event.target.value }))} placeholder="ex.: maria.souza" />
+              <Label htmlFor="usuario">Usuário</Label>
+              <Input
+                id="usuario"
+                placeholder="ex.: maria.souza"
+                value={form.usuario}
+                onChange={(event) => setForm((current) => ({ ...current, usuario: event.target.value }))}
+              />
             </div>
             <div className="space-y-2">
-              <Label>E-mail</Label>
-              <Input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} placeholder="maria@diogostore.com" />
+              <Label htmlFor="email">E-mail</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="maria@diogostore.com"
+                value={form.email}
+                onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+              />
             </div>
             <div className="space-y-2">
-              <Label>Senha</Label>
-              <Input type="password" value={form.senha} onChange={(event) => setForm((current) => ({ ...current, senha: event.target.value }))} placeholder="Senha inicial" />
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Senha inicial"
+                value={form.password}
+                onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+              />
             </div>
 
             <Button type="submit" className="w-full" disabled={salvando}>
