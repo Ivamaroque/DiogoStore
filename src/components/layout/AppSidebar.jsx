@@ -13,7 +13,7 @@ const links = [
 
 export function AppSidebar({ pathname }) {
   return (
-    <aside className="hidden w-80 shrink-0 border-r border-zinc-800 bg-zinc-950/95 lg:flex lg:flex-col">
+    <aside className="hidden w-80 shrink-0 border-r border-zinc-800 bg-zinc-950/95 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
       <div className="border-b border-zinc-800 px-6 py-5">
         <Logo />
       </div>
