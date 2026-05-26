@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { useState, useEffect } from "react";
 import { ArrowUpRight, CalendarDays, Clock3, ChevronDown, Package, Phone, User } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,10 +23,31 @@ export function PedidoCard({ pedido }) {
   const [editingStatusFor, setEditingStatusFor] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState("");
   const [statusMap, setStatusMap] = useState({});
+  const [statusMenuRect, setStatusMenuRect] = useState(null);
   const [editingRastreioFor, setEditingRastreioFor] = useState(null);
   const [rastreioValue, setRastreioValue] = useState("");
   const [rastreioEmGrupo, setRastreioEmGrupo] = useState(false);
+  const [rastreioMenuRect, setRastreioMenuRect] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  function getMenuPlacement(rect, width, height) {
+    const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 0;
+    const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 0;
+    const margin = 8;
+
+    let top = rect.bottom + 8;
+    if (viewportHeight && top + height > viewportHeight - margin) {
+      top = Math.max(margin, rect.top - height - 8);
+    }
+
+    const left = Math.min(Math.max(margin, rect.right - width), Math.max(margin, viewportWidth - width - margin));
+
+    return {
+      top,
+      left,
+      width: Math.min(width, Math.max(0, viewportWidth - margin * 2)),
+    };
+  }
 
   async function handleSaveStatus(item) {
     try {
@@ -51,6 +73,11 @@ export function PedidoCard({ pedido }) {
   }
 
   useEffect(() => {
+    function closeMenus() {
+      setEditingStatusFor(null);
+      setEditingRastreioFor(null);
+    }
+
     function handleOutsideClick(e) {
       const target = e.target;
 
@@ -58,6 +85,7 @@ export function PedidoCard({ pedido }) {
         const statusRoot = document.querySelector(`[data-status-root="${editingStatusFor}"]`);
         if (statusRoot && !statusRoot.contains(target)) {
           setEditingStatusFor(null);
+          setStatusMenuRect(null);
         }
       }
 
@@ -65,15 +93,24 @@ export function PedidoCard({ pedido }) {
         const rastreioRoot = document.querySelector(`[data-rastreio-root="${editingRastreioFor}"]`);
         if (rastreioRoot && !rastreioRoot.contains(target)) {
           setEditingRastreioFor(null);
+          setRastreioMenuRect(null);
         }
       }
     }
 
+    function handleViewportChange() {
+      closeMenus();
+    }
+
     document.addEventListener("mousedown", handleOutsideClick);
     document.addEventListener("touchstart", handleOutsideClick);
+    window.addEventListener("scroll", handleViewportChange, true);
+    window.addEventListener("resize", handleViewportChange);
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
       document.removeEventListener("touchstart", handleOutsideClick);
+      window.removeEventListener("scroll", handleViewportChange, true);
+      window.removeEventListener("resize", handleViewportChange);
     };
   }, [editingStatusFor, editingRastreioFor]);
 
@@ -127,102 +164,191 @@ export function PedidoCard({ pedido }) {
 
         <div className="space-y-3">
           {pedido.itens_pedido?.map((item) => (
+            (() => {
+              const current = statusMap[item.id] ?? item.status_itens;
+              const isStatusOpen = editingStatusFor === item.id;
+              const isRastreioOpen = editingRastreioFor === item.id;
+
+              return (
             <div key={item.id} className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-4 lg:flex-row lg:items-center">
-              <div className="flex items-center gap-4 min-w-0">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-800 text-sm font-semibold text-zinc-300">
+              <div className="flex items-start gap-4 min-w-0">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-sm font-semibold text-zinc-300">
                   {item.quantidade}x
                 </div>
 
                 <div className="min-w-0">
-                  <p className="truncate text-base font-semibold text-white">{item.nome_produto}</p>
+                  <p className="truncate text-[15px] font-semibold text-white sm:text-base">{item.nome_produto}</p>
                   <p className="text-sm text-zinc-500">{item.tipo || "Sem tipo"}</p>
                 </div>
               </div>
 
-              <div className="mt-2 w-full flex-1 min-w-0 lg:mt-0 lg:px-6">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm text-zinc-300">Tamanho: {item.tamanho || '—'}</p>
-                    <p className="truncate text-sm text-zinc-300">Personalização: {item.personalizacao || '—'}</p>
+              <div className="w-full flex-1 min-w-0 lg:px-6">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 text-sm text-zinc-300">
+                  <p className="min-w-0 truncate">Tamanho</p>
+                  <p className="justify-self-end truncate text-right font-semibold text-white">{item.tamanho || '—'}</p>
+                  <p className="min-w-0 truncate">Personalização</p>
+                  <p className="justify-self-end truncate text-right font-semibold text-white">{item.personalizacao || '—'}</p>
+                </div>
+              </div>
+
+              <div data-rastreio-root={item.id} className="grid w-full gap-3 sm:mt-0 sm:w-auto sm:gap-0">
+                <div className="grid w-full gap-3 sm:hidden">
+                  <div className="flex w-full items-center gap-3">
+                    <div data-status-root={item.id} className="relative flex flex-1 items-center gap-2">
+                      <button
+                        aria-label="Abrir menu de status"
+                        className="inline-flex min-w-0 flex-1 items-center justify-between gap-2 rounded-full border border-zinc-800 px-4 py-2 text-sm"
+                        onClick={(event) => {
+                          const rect = event.currentTarget.getBoundingClientRect();
+                          setEditingRastreioFor(null);
+                          setRastreioMenuRect(null);
+
+                          if (isStatusOpen) {
+                            setEditingStatusFor(null);
+                            setStatusMenuRect(null);
+                            return;
+                          }
+
+                          setEditingStatusFor(item.id);
+                          setStatusMenuRect(rect);
+                        }}
+                        style={{ backgroundColor: getStatusBadgeStyle(current?.cor).backgroundColor, borderColor: getStatusBadgeStyle(current?.cor).borderColor, color: getStatusBadgeStyle(current?.cor).color }}
+                      >
+                        <span className="min-w-0 truncate text-xs">{current?.nome ?? "Status"}</span>
+                        <ChevronDown className="h-4 w-4 text-zinc-200" />
+                      </button>
+                    </div>
+
+                    <div className="relative flex flex-1 items-center gap-2">
+                      <RastreioBadge
+                        rastreio={item.rastreios}
+                        mode="edit"
+                        className="w-full"
+                        onEditClick={(event) => {
+                          const rect = event?.currentTarget?.getBoundingClientRect?.();
+                          if (isRastreioOpen) {
+                            setEditingRastreioFor(null);
+                            setRastreioMenuRect(null);
+                            return;
+                          }
+
+                          setEditingRastreioFor(item.id);
+                          setEditingStatusFor(null);
+                          setStatusMenuRect(null);
+                          setRastreioValue(item.rastreios?.codigo_rastreio ?? "");
+                          setRastreioEmGrupo(Boolean(item.rastreios?.rastreio_em_grupo));
+                          if (rect) setRastreioMenuRect(rect);
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <RastreioBadge rastreio={item.rastreios} mode="code" fullWidth className="w-full" />
                   </div>
                 </div>
 
-              </div>
+                <div className="hidden items-center gap-3 sm:flex">
+                  <div data-status-root={item.id} className="relative flex items-center gap-2">
+                    <button
+                      aria-label="Abrir menu de status"
+                      className="inline-flex items-center gap-2 rounded-full border border-zinc-800 px-3 py-1 text-sm"
+                      onClick={(event) => {
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        setEditingRastreioFor(null);
+                        setRastreioMenuRect(null);
 
-              <div className="mt-2 flex w-full items-center justify-end gap-3 sm:mt-0 sm:w-auto">
-                <div data-status-root={item.id} className="relative flex items-center gap-2">
-                  {(() => {
-                    const current = statusMap[item.id] ?? item.status_itens;
-                    const style = getStatusBadgeStyle(current?.cor);
+                        if (isStatusOpen) {
+                          setEditingStatusFor(null);
+                          setStatusMenuRect(null);
+                          return;
+                        }
 
-                    return (
-                      <>
-                        <button
-                          aria-label="Abrir menu de status"
-                          className="inline-flex items-center gap-2 rounded-full border border-zinc-800 px-3 py-1 text-sm"
-                          onClick={() => setEditingStatusFor((cur) => (cur === item.id ? null : item.id))}
-                          style={{ backgroundColor: style.backgroundColor, borderColor: style.borderColor, color: style.color }}
-                        >
-                          <span className="text-xs">{current?.nome ?? "Status"}</span>
-                          <ChevronDown className="h-4 w-4 text-zinc-200" />
-                        </button>
+                        setEditingStatusFor(item.id);
+                        setStatusMenuRect(rect);
+                      }}
+                      style={{ backgroundColor: getStatusBadgeStyle(current?.cor).backgroundColor, borderColor: getStatusBadgeStyle(current?.cor).borderColor, color: getStatusBadgeStyle(current?.cor).color }}
+                    >
+                      <span className="text-xs">{current?.nome ?? "Status"}</span>
+                      <ChevronDown className="h-4 w-4 text-zinc-200" />
+                    </button>
+                  </div>
 
-                        {editingStatusFor === item.id ? (
-                          <div className="absolute right-0 z-40 mt-10 w-56 rounded-xl border border-zinc-800 bg-zinc-950 p-2 shadow-lg">
-                            {STATUS_FIXOS.map((s) => (
-                              <button
-                                key={s.id}
-                                className={"flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-sm text-left " + (String(s.id) === String(current?.id ?? item.status_item_id) ? "bg-zinc-900 text-white" : "text-zinc-300 hover:bg-zinc-900")}
-                                onClick={async () => {
-                                  try {
-                                    await atualizarStatusItem({ itemId: item.id, status_item_id: Number(s.id) });
-                                    setStatusMap((m) => ({ ...m, [item.id]: s }));
-                                  } catch (e) {
-                                    // ignore, server will have authoritative state
-                                  } finally {
-                                    setEditingStatusFor(null);
-                                  }
-                                }}
-                              >
-                                <span>{s.nome}</span>
-                                <span className="text-xs text-zinc-500">{s.descricao}</span>
-                              </button>
-                            ))}
-                          </div>
-                        ) : null}
-                      </>
-                    );
-                  })()}
-                </div>
-
-                <div data-rastreio-root={item.id} className="relative flex items-center gap-2">
                   <RastreioBadge 
                     rastreio={item.rastreios}
-                    onEditClick={() => {
-                      setEditingRastreioFor((cur) => (cur === item.id ? null : item.id));
-                      if (editingRastreioFor !== item.id) {
-                        setRastreioValue(item.rastreios?.codigo_rastreio ?? "");
-                        setRastreioEmGrupo(Boolean(item.rastreios?.rastreio_em_grupo));
+                    onEditClick={(event) => {
+                      const rect = event?.currentTarget?.getBoundingClientRect?.();
+                      if (isRastreioOpen) {
+                        setEditingRastreioFor(null);
+                        setRastreioMenuRect(null);
+                        return;
                       }
+
+                      setEditingRastreioFor(item.id);
+                      setEditingStatusFor(null);
+                      setStatusMenuRect(null);
+                      setRastreioValue(item.rastreios?.codigo_rastreio ?? "");
+                      setRastreioEmGrupo(Boolean(item.rastreios?.rastreio_em_grupo));
+                      if (rect) setRastreioMenuRect(rect);
                     }}
                   />
-
-                  {editingRastreioFor === item.id ? (
-                    <div className="absolute right-0 z-40 mt-10 w-80 rounded-xl border border-zinc-800 bg-zinc-950 p-4 shadow-lg">
-                      <div className="space-y-2">
-                        <label className="text-sm text-zinc-300">Código de rastreio</label>
-                        <Input value={rastreioValue} onChange={(e) => setRastreioValue(e.target.value)} placeholder="Código de rastreio" />
-                        <label className="flex items-center gap-2 text-sm text-zinc-400"><input type="checkbox" checked={rastreioEmGrupo} onChange={(e) => setRastreioEmGrupo(e.target.checked)} className="h-4 w-4 accent-brand" /> Rastreio em conjunto</label>
-                        <div className="flex justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={() => setEditingRastreioFor(null)}>Cancelar</Button>
-                          <Button size="sm" onClick={() => handleSaveRastreio(item)} disabled={saving}>Salvar</Button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
                 </div>
               </div>
+
+              {typeof document !== "undefined" && isStatusOpen && statusMenuRect ? createPortal(
+                <div
+                  className="fixed z-[60] rounded-xl border border-zinc-800 bg-zinc-950 p-2 shadow-2xl shadow-black/50"
+                  style={getMenuPlacement(statusMenuRect, 320, 360)}
+                >
+                  <div className="max-h-[min(360px,calc(100vh-2rem))] overflow-auto">
+                    {STATUS_FIXOS.map((s) => (
+                      <button
+                        key={s.id}
+                        className={"flex w-full items-start justify-between gap-3 rounded-md px-3 py-2 text-left text-sm " + (String(s.id) === String(current?.id ?? item.status_item_id) ? "bg-zinc-900 text-white" : "text-zinc-300 hover:bg-zinc-900")}
+                        onClick={async () => {
+                          try {
+                            await atualizarStatusItem({ itemId: item.id, status_item_id: Number(s.id) });
+                            setStatusMap((m) => ({ ...m, [item.id]: s }));
+                          } catch (e) {
+                            // ignore, server will have authoritative state
+                          } finally {
+                            setEditingStatusFor(null);
+                            setStatusMenuRect(null);
+                          }
+                        }}
+                      >
+                        <span className="min-w-0 flex-1">{s.nome}</span>
+                        <span className="max-w-44 text-xs leading-5 text-zinc-500">{s.descricao}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>,
+                document.body,
+              ) : null}
+
+              {typeof document !== "undefined" && isRastreioOpen && rastreioMenuRect ? createPortal(
+                <div
+                  className="fixed z-[60] rounded-xl border border-zinc-800 bg-zinc-950 p-4 shadow-2xl shadow-black/50"
+                  style={getMenuPlacement(rastreioMenuRect, 352, 240)}
+                >
+                  <div className="space-y-3">
+                    <label className="text-sm text-zinc-300">Código de rastreio</label>
+                    <Input value={rastreioValue} onChange={(e) => setRastreioValue(e.target.value)} placeholder="Código de rastreio" />
+                    <label className="flex items-center gap-2 text-sm text-zinc-400"><input type="checkbox" checked={rastreioEmGrupo} onChange={(e) => setRastreioEmGrupo(e.target.checked)} className="h-4 w-4 accent-brand" /> Rastreio em conjunto</label>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" size="sm" onClick={() => {
+                        setEditingRastreioFor(null);
+                        setRastreioMenuRect(null);
+                      }}>Cancelar</Button>
+                      <Button size="sm" onClick={() => handleSaveRastreio(item)} disabled={saving}>Salvar</Button>
+                    </div>
+                  </div>
+                </div>,
+                document.body,
+              ) : null}
             </div>
+              );
+            })()
           ))}
         </div>
       </CardContent>
@@ -234,8 +360,7 @@ export function PedidoCard({ pedido }) {
             {pedido.forma_pagamento || "Não informado"}
           </span>
           <span className="flex items-center gap-2 text-zinc-500">
-            <User className="h-4 w-4" />
-            Vendedor: {pedido.perfis?.nome_completo || "—"}
+            <User className="h-4 w-4" /> {pedido.perfis?.nome_completo || "—"}
           </span>
         </div>
 
