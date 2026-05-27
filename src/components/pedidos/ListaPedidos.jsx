@@ -1,18 +1,77 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Loader2, RefreshCcw, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { Loader2, RefreshCcw, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { usePedidos } from "@/hooks/usePedidos";
+import { Input } from "@/components/ui/input";
 import { PedidoCard } from "./PedidoCard";
 import { contarItensPorRastreio } from "@/utils/rastreios";
 import { sincronizarRastreiosEmGrupo } from "@/services/rastreiosService";
+import { listarPedidosPorPagina } from "@/services/pedidosService";
 
-export function ListaPedidos({ statusItens = [] }) {
+const PAGE_SIZE = 10;
+
+export function ListaPedidos() {
+  const [pedidos, setPedidos] = useState([]);
   const [termo, setTermo] = useState("");
   const [abaAtiva, setAbaAtiva] = useState("todos");
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [error, setError] = useState("");
+  const loadMoreRef = useRef(null);
+  const loadingRef = useRef(false);
+  const pageRef = useRef(1);
+
+  const carregarPedidos = useCallback(async ({ reset = false } = {}) => {
+    if (loadingRef.current) return;
+
+    loadingRef.current = true;
+
+    try {
+      setLoading(true);
+      setError("");
+
+      const paginaAtual = reset ? 1 : pageRef.current;
+      const result = await listarPedidosPorPagina({ page: paginaAtual, pageSize: PAGE_SIZE });
+
+      setPedidos((prev) => {
+        if (reset) return result.pedidos;
+
+        const idsExistentes = new Set(prev.map((pedido) => pedido.id));
+        const novos = result.pedidos.filter((pedido) => !idsExistentes.has(pedido.id));
+
+        return [...prev, ...novos];
+      });
+
+      setHasMore(result.hasMore);
+      pageRef.current = paginaAtual + 1;
+      setPage(pageRef.current);
+    } catch (error) {
+      console.error(error);
+      setError("Não foi possível carregar os pedidos. Tente novamente.");
+    } finally {
+      loadingRef.current = false;
+      setLoading(false);
+      setInitialLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    pageRef.current = 1;
+    setPage(1);
+    setHasMore(true);
+    void carregarPedidos({ reset: true });
+  }, [carregarPedidos]);
+
+  const contagemPorRastreio = useMemo(() => contarItensPorRastreio(pedidos), [pedidos]);
+
+  useEffect(() => {
+    void sincronizarRastreiosEmGrupo(contagemPorRastreio).catch(() => {});
+  }, [contagemPorRastreio]);
 
   const filtroAtivo = useMemo(() => {
     switch (abaAtiva) {
@@ -31,17 +90,38 @@ export function ListaPedidos({ statusItens = [] }) {
     }
   }, [abaAtiva]);
 
-  const filtros = useMemo(() => ({
-    termo,
-    ...filtroAtivo,
-  }), [termo, filtroAtivo]);
+  const pedidosFiltrados = useMemo(() => {
+    const termoLimpo = termo.trim().toLowerCase();
 
-  const { pedidos, carregando, erro, recarregar } = usePedidos(filtros);
-  const contagemPorRastreio = useMemo(() => contarItensPorRastreio(pedidos), [pedidos]);
+    return pedidos.filter((pedido) => {
+      const itens = pedido.itens_pedido ?? [];
+      const correspondeTermo =
+        !termoLimpo ||
+        String(pedido.id ?? "").toLowerCase().includes(termoLimpo) ||
+        String(pedido.nome_cliente ?? "").toLowerCase().includes(termoLimpo) ||
+        String(pedido.telefone ?? "").toLowerCase().includes(termoLimpo) ||
+        itens.some(
+          (item) =>
+            String(item.nome_produto ?? "").toLowerCase().includes(termoLimpo) ||
+            String(item.rastreios?.codigo_rastreio ?? "").toLowerCase().includes(termoLimpo),
+        );
 
-  useEffect(() => {
-    void sincronizarRastreiosEmGrupo(contagemPorRastreio).catch(() => {});
-  }, [contagemPorRastreio]);
+      const correspondeStatus =
+        !filtroAtivo.somenteComRestante &&
+        !filtroAtivo.somenteProntos &&
+        !filtroAtivo.somenteEntregues &&
+        !filtroAtivo.somenteComProblema &&
+        !filtroAtivo.somenteCancelados
+          ? true
+          : (filtroAtivo.somenteComRestante && Number(pedido.valor_restante) > 0) ||
+            (filtroAtivo.somenteProntos && itens.some((item) => Number(item.status_item_id) === 4)) ||
+            (filtroAtivo.somenteEntregues && itens.some((item) => Number(item.status_item_id) === 5)) ||
+            (filtroAtivo.somenteComProblema && itens.some((item) => Number(item.status_item_id) === 7)) ||
+            (filtroAtivo.somenteCancelados && itens.some((item) => Number(item.status_item_id) === 6));
+
+      return correspondeTermo && correspondeStatus;
+    });
+  }, [filtroAtivo, pedidos, termo]);
 
   const filtrosRapidos = [
     { id: "todos", label: "Todos" },
@@ -52,6 +132,33 @@ export function ListaPedidos({ statusItens = [] }) {
     { id: "cancelado", label: "Cancelado" },
   ];
 
+  useEffect(() => {
+    const target = loadMoreRef.current;
+
+    if (!target || !hasMore || loading || initialLoading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+
+        if (first.isIntersecting && hasMore && !loadingRef.current) {
+          void carregarPedidos();
+        }
+      },
+      {
+        root: null,
+        rootMargin: "300px",
+        threshold: 0,
+      },
+    );
+
+    observer.observe(target);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasMore, loading, initialLoading, page, carregarPedidos]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -60,21 +167,29 @@ export function ListaPedidos({ statusItens = [] }) {
           <p className="mt-1 text-sm text-zinc-400">Controle individual de status por item de venda.</p>
         </div>
 
-        <Button variant="outline" onClick={recarregar} className="border-zinc-700 bg-zinc-900 text-white hover:bg-zinc-800">
-          {carregando ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
-          Atualizar Lista
-        </Button>
+        <div className="flex flex-wrap gap-3">
+          <Button variant="outline" onClick={() => carregarPedidos({ reset: true })} disabled={loading} className="border-zinc-700 bg-zinc-900 text-white hover:bg-zinc-800">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
+            Atualizar Lista
+          </Button>
+
+          <Button asChild className="bg-brand text-white hover:bg-brand/90">
+            <Link href="/pedidos/novo">
+              <Plus className="h-4 w-4" />
+              Novo pedido
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Card className="border-zinc-800 bg-zinc-900/95 shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
         <CardContent className="space-y-4 p-4 sm:p-5">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
             <Input
               value={termo}
               onChange={(event) => setTermo(event.target.value)}
-              className="h-12 rounded-2xl border-zinc-800 bg-zinc-950 pl-11 text-white placeholder:text-zinc-500"
-              placeholder="Buscar por cliente ou número do pedido..."
+              className="h-12 rounded-2xl border-zinc-800 bg-zinc-950 text-white placeholder:text-zinc-500"
+              placeholder="Buscar por cliente, pedido ou rastreio..."
             />
           </div>
 
@@ -100,31 +215,59 @@ export function ListaPedidos({ statusItens = [] }) {
         </CardContent>
       </Card>
 
-      {erro ? (
-        <Card className="border-zinc-800 bg-zinc-900/95">
-          <CardContent className="px-6 py-10 text-center text-sm text-red-300">
-            Não foi possível carregar os pedidos. Tente novamente.
-          </CardContent>
-        </Card>
-      ) : carregando ? (
+      {initialLoading ? (
         <div className="space-y-4">
+          <p className="text-sm text-zinc-400">Carregando pedidos...</p>
           {[...Array(2)].map((_, index) => (
             <div key={index} className="h-[320px] animate-pulse rounded-3xl border border-zinc-800 bg-zinc-900" />
           ))}
         </div>
-      ) : pedidos.length ? (
+      ) : error && pedidos.length === 0 ? (
+        <Card className="border-zinc-800 bg-zinc-900/95">
+          <CardContent className="flex flex-col items-center justify-center gap-4 px-6 py-14 text-center">
+            <p className="text-sm text-red-300">{error}</p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Button variant="outline" onClick={() => carregarPedidos({ reset: true })} className="border-zinc-700 bg-zinc-900 text-white hover:bg-zinc-800">
+                Tentar novamente
+              </Button>
+              <Button asChild className="bg-brand text-white hover:bg-brand/90">
+                <Link href="/pedidos/novo">+ Novo pedido</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : pedidosFiltrados.length ? (
         <div className="space-y-4">
-          {pedidos.map((pedido) => (
+          {pedidosFiltrados.map((pedido) => (
             <PedidoCard key={pedido.id} pedido={pedido} contagemPorRastreio={contagemPorRastreio} />
           ))}
+
+          <div ref={loadMoreRef} className="h-10" />
+
+          {loading && !initialLoading ? (
+            <p className="text-center text-sm text-zinc-500">Carregando mais pedidos...</p>
+          ) : null}
+
+          {!hasMore ? (
+            <p className="text-center text-sm text-zinc-600">Todos os pedidos foram carregados.</p>
+          ) : null}
+
+          {error ? (
+            <p className="text-center text-sm text-red-300">{error}</p>
+          ) : null}
         </div>
       ) : (
         <Card className="border-zinc-800 bg-zinc-900/95">
-          <CardContent className="flex flex-col items-center justify-center gap-3 px-6 py-14 text-center">
-            <span className="rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1 text-xs font-medium text-zinc-100">Nenhum pedido encontrado</span>
-            <p className="max-w-md text-sm text-zinc-400">
-              Ajuste os filtros ou crie um novo pedido para começar a usar o sistema.
-            </p>
+          <CardContent className="flex flex-col items-center justify-center gap-4 px-6 py-14 text-center">
+            <p className="text-lg font-semibold text-white">Nenhum pedido encontrado.</p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Button variant="outline" onClick={() => carregarPedidos({ reset: true })} className="border-zinc-700 bg-zinc-900 text-white hover:bg-zinc-800">
+                Atualizar lista
+              </Button>
+              <Button asChild className="bg-brand text-white hover:bg-brand/90">
+                <Link href="/pedidos/novo">+ Novo pedido</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}

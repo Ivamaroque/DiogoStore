@@ -26,6 +26,10 @@ const PEDIDO_SELECT = `
   )
 `;
 
+function buildPedidoQuery(supabase) {
+  return supabase.from("pedidos").select(PEDIDO_SELECT, { count: "exact" }).order("criado_em", { ascending: false });
+}
+
 function normalizePedido(pedido) {
   if (!pedido) return null;
 
@@ -46,8 +50,26 @@ function matchText(source, term) {
   return String(source ?? "").toLowerCase().includes(term);
 }
 
+export async function listarPedidosPorPagina({ page = 1, pageSize = 10 } = {}, supabase = getSupabaseBrowserClient()) {
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  const { data, error, count } = await buildPedidoQuery(supabase).range(from, to);
+
+  if (error) throw error;
+
+  const pedidos = (data ?? []).map(normalizePedido).filter(Boolean);
+  const total = count ?? 0;
+
+  return {
+    pedidos,
+    total,
+    hasMore: to + 1 < total,
+  };
+}
+
 export async function listarPedidos({ termo = "", statusId = "", somenteComProblema = false, somenteProntos = false, somenteEntregues = false, somenteCancelados = false, somenteComRestante = false, rastreioEmGrupo = false } = {}, supabase = getSupabaseBrowserClient()) {
-  const { data, error } = await supabase.from("pedidos").select(PEDIDO_SELECT).order("criado_em", { ascending: false });
+  const { data, error } = await buildPedidoQuery(supabase);
   if (error) throw error;
 
   const termoLimpo = termo.trim().toLowerCase();

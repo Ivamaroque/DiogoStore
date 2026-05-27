@@ -36,6 +36,14 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
     setPedidoLocal(pedido);
   }, [pedido]);
 
+  const itensPedido = pedidoLocal.itens_pedido ?? [];
+  const todosItensEntregues = itensPedido.length > 0 && itensPedido.every((item) => Number(item.status_item_id) === 5);
+  const statusResumoPedido = todosItensEntregues
+    ? { label: "Finalizado", variant: "success" }
+    : pedidoLocal.valor_restante > 0
+      ? { label: "Em aberto", variant: "danger" }
+      : { label: "Pago", variant: "success" };
+
   function getMenuPlacement(rect, width, height) {
     const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 0;
     const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 0;
@@ -154,8 +162,8 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <CardTitle className="truncate text-xl text-white">{pedido.nome_cliente}</CardTitle>
-                <Badge variant={pedido.valor_restante > 0 ? "danger" : "success"}>
-                  {pedido.valor_restante > 0 ? "Em aberto" : "Pago"}
+                <Badge variant={statusResumoPedido.variant}>
+                  {statusResumoPedido.label}
                 </Badge>
               </div>
 
