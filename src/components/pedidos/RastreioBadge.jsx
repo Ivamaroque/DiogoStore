@@ -21,6 +21,18 @@ export function RastreioBadge({ item, rastreio, contagemPorRastreio = {}, classN
   };
 
   if (!rastreioAtual) {
+    if (onEditClick) {
+      return (
+        <button
+          onClick={handleEditClick}
+          className={`inline-flex items-center gap-2 rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1 text-sm text-zinc-200 transition-colors hover:bg-zinc-700 ${fullWidth ? "w-full justify-between" : ""} ${className}`.trim()}
+          title="Adicionar rastreio"
+        >
+          <span className="truncate">Sem rastreio</span>
+        </button>
+      );
+    }
+
     return <Badge variant="default" className={className}>Sem rastreio</Badge>;
   }
 

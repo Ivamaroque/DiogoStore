@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { CalendarDays, CreditCard, Package, Phone, Save, Truck, User, ChevronDown, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
   const [rastreioAbertoId, setRastreioAbertoId] = useState(null);
   const [rastreioCodigo, setRastreioCodigo] = useState("");
   const [rastreioEmGrupo, setRastreioEmGrupo] = useState(false);
+  const [rastreioMenuRect, setRastreioMenuRect] = useState(null);
   const [salvandoRastreio, setSalvandoRastreio] = useState(false);
   const [statusMap, setStatusMap] = useState({});
 
@@ -51,6 +53,7 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
       toast.success("Rastreio atualizado.");
       setRastreioAbertoId(null);
       setRastreioCodigo("");
+      setRastreioMenuRect(null);
     } catch (error) {
       const mensagemErro = error instanceof Error ? error.message : typeof error === "string" ? error : error?.message || JSON.stringify(error);
       toast.error(mensagemErro || "Não foi possível atualizar o rastreio.");
@@ -58,6 +61,46 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
       setSalvandoRastreio(false);
     }
   }
+
+  function getMenuPlacement(rect, width, height) {
+    const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 0;
+    const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 0;
+    const margin = 8;
+
+    let top = rect.bottom + 8;
+    if (viewportHeight && top + height > viewportHeight - margin) {
+      top = Math.max(margin, rect.top - height - 8);
+    }
+
+    const left = Math.min(Math.max(margin, rect.right - width), Math.max(margin, viewportWidth - width - margin));
+
+    return {
+      top,
+      left,
+      width: Math.min(width, Math.max(0, viewportWidth - margin * 2)),
+    };
+  }
+
+  useEffect(() => {
+    if (rastreioAbertoId === null) return;
+
+    function handleOutside(e) {
+      const target = e.target;
+      const root = document.querySelector(`[data-rastreio-root="${rastreioAbertoId}"]`);
+      const portal = document.querySelector(`[data-rastreio-portal="${rastreioAbertoId}"]`);
+      if (root && root.contains(target)) return;
+      if (portal && portal.contains(target)) return;
+      setRastreioAbertoId(null);
+      setRastreioMenuRect(null);
+    }
+
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, [rastreioAbertoId]);
 
   async function copiarTextoPedido() {
     try {
@@ -141,7 +184,24 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
                     </div>
                     <div className="flex flex-wrap gap-2 lg:hidden">
                       <StatusBadge status={item.status_itens} />
-                      <RastreioBadge item={item} rastreio={item.rastreios} contagemPorRastreio={contagemPorRastreio} />
+                      <RastreioBadge
+                        item={item}
+                        rastreio={item.rastreios}
+                        contagemPorRastreio={contagemPorRastreio}
+                        onEditClick={(event) => {
+                          const rect = event?.currentTarget?.getBoundingClientRect?.();
+                          if (rastreioAbertoId === item.id) {
+                            setRastreioAbertoId(null);
+                            setRastreioMenuRect(null);
+                            return;
+                          }
+
+                          setRastreioAbertoId(item.id);
+                          setRastreioCodigo(item.rastreios?.codigo_rastreio ?? "");
+                          setRastreioEmGrupo(Boolean(item.rastreios?.rastreio_em_grupo));
+                          if (rect) setRastreioMenuRect(rect);
+                        }}
+                      />
                     </div>
                   </div>
 
@@ -198,7 +258,24 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
                     </div>
 
                     {/* Rastreio inline editor trigger */}
-                    <RastreioBadge item={item} rastreio={item.rastreios} contagemPorRastreio={contagemPorRastreio} onEditClick={() => { setRastreioAbertoId((current) => (current === item.id ? null : item.id)); setRastreioCodigo(item.rastreios?.codigo_rastreio ?? ""); setRastreioEmGrupo(Boolean(item.rastreios?.rastreio_em_grupo)); }} />
+                    <RastreioBadge
+                      item={item}
+                      rastreio={item.rastreios}
+                      contagemPorRastreio={contagemPorRastreio}
+                      onEditClick={(event) => {
+                        const rect = event?.currentTarget?.getBoundingClientRect?.();
+                        if (rastreioAbertoId === item.id) {
+                          setRastreioAbertoId(null);
+                          setRastreioMenuRect(null);
+                          return;
+                        }
+
+                        setRastreioAbertoId(item.id);
+                        setRastreioCodigo(item.rastreios?.codigo_rastreio ?? "");
+                        setRastreioEmGrupo(Boolean(item.rastreios?.rastreio_em_grupo));
+                        if (rect) setRastreioMenuRect(rect);
+                      }}
+                    />
                   </div>
                 </div>
 
@@ -218,27 +295,29 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
                   <p className="mt-1 text-sm text-white">{item.observacao_status || "Sem observação"}</p>
                 </div>
 
-                {rastreioAbertoId === item.id ? (
-                  <div className="mt-4 space-y-3 rounded-2xl border border-brand/20 bg-brand/5 p-4">
-                    <div className="space-y-2">
-                      <Label>Código de rastreio</Label>
-                      <Input value={rastreioCodigo} onChange={(event) => setRastreioCodigo(event.target.value)} placeholder="Opcional" />
-                    </div>
-
-                    <label className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white">
-                      <span>Rastreio em grupo</span>
-                      <input type="checkbox" checked={rastreioEmGrupo} onChange={(event) => setRastreioEmGrupo(event.target.checked)} className="h-4 w-4 accent-brand" />
-                    </label>
-
-                    <div className="flex flex-wrap items-center gap-3">
-                      <Button onClick={() => salvarRastreio(item.id)} disabled={salvandoRastreio} className="gap-2">
-                        {salvandoRastreio ? <Save className="h-4 w-4 animate-pulse" /> : <Save className="h-4 w-4" />}
-                        Salvar rastreio
-                      </Button>
-                      <Button variant="outline" onClick={() => setRastreioAbertoId(null)}>Cancelar</Button>
-                    </div>
-                  </div>
-                ) : null}
+                {typeof document !== "undefined" && rastreioAbertoId === item.id && rastreioMenuRect
+                  ? createPortal(
+                      <div
+                        data-rastreio-portal={item.id}
+                        className="fixed z-[60] rounded-xl border border-zinc-800 bg-zinc-950 p-4 shadow-2xl shadow-black/50"
+                        style={getMenuPlacement(rastreioMenuRect, 352, 200)}
+                      >
+                        <div className="space-y-3">
+                          <label className="text-sm text-zinc-300">Código de rastreio</label>
+                          <Input value={rastreioCodigo} onChange={(e) => setRastreioCodigo(e.target.value)} placeholder="Código de rastreio" />
+                          {/* 'Rastreio em grupo' checkbox removed per UX request */}
+                          <div className="flex justify-end gap-2">
+                            <Button variant="outline" size="sm" onClick={() => {
+                              setRastreioAbertoId(null);
+                              setRastreioMenuRect(null);
+                            }}>Cancelar</Button>
+                            <Button size="sm" onClick={() => salvarRastreio(item.id)} disabled={salvandoRastreio}>Salvar</Button>
+                          </div>
+                        </div>
+                      </div>,
+                      document.body,
+                    )
+                  : null}
               </div>
             ))
           ) : (
