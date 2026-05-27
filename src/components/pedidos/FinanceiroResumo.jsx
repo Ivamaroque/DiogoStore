@@ -19,9 +19,9 @@ export function FinanceiroResumo({ valorTotal = 0, valorPago = 0, valorRestante 
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Restante</p>
             <div className="mt-1 flex items-center gap-2">
               <p className="text-lg font-semibold text-red-400">{formatCurrency(Math.max(valorRestante, 0))}</p>
-              {showStatusBadge ? (
+              {/* {showStatusBadge ? (
                 <Badge variant={valorRestante > 0 ? "danger" : "success"}>{valorRestante > 0 ? "Pendente" : "Quitado"}</Badge>
-              ) : null}
+              ) : null} */}
             </div>
           </div>
         </div>
