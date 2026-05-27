@@ -18,6 +18,7 @@ import { obterOuCriarRastreio } from "@/services/rastreiosService";
 import { STATUS_FIXOS } from "@/lib/constants/status";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
+import { atualizarPedido } from "@/services/pedidosService";
 
 export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
   const router = useRouter();
@@ -106,6 +107,33 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
     }
   }
 
+  async function handlePagarRestante() {
+    if (!pedidoLocal || Number(pedidoLocal.valor_restante) <= 0) return;
+
+    try {
+      setSaving(true);
+      const atualizado = await atualizarPedido(pedidoLocal.id, {
+        valor_pago: Number(pedidoLocal.valor_total || 0),
+        valor_restante: 0,
+      });
+
+      setPedidoLocal((current) => ({
+        ...current,
+        ...atualizado,
+        valor_pago: Number(atualizado?.valor_pago ?? current.valor_total ?? 0),
+        valor_restante: 0,
+      }));
+
+      router.refresh();
+      toast.success("Restante quitado com sucesso.");
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.message || "Não foi possível quitar o restante.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   useEffect(() => {
     function closeMenus() {
       setEditingStatusFor(null);
@@ -186,7 +214,9 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
             </div>
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">Restante</p>
-              <p className="mt-2 text-xl font-semibold text-rose-400">{formatCurrency(Math.max(pedidoLocal.valor_restante, 0))}</p>
+                <div className="mt-2 flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+                  <p className="text-xl font-semibold text-rose-400">{formatCurrency(Math.max(pedidoLocal.valor_restante, 0))}</p>
+                </div>
             </div>
           </div>
         </div>
@@ -448,8 +478,21 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button asChild size="sm" className="gap-2 rounded-xl px-4">
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+          {Number(pedidoLocal.valor_restante) > 0 ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handlePagarRestante}
+              disabled={saving}
+              className="w-full gap-2 rounded-xl border-[#27a074]/40 bg-[#27a074] px-4 text-white shadow-glow hover:bg-[#27a074]/90 hover:text-white sm:w-auto"
+            >
+              Pagar restante
+            </Button>
+          ) : null}
+
+          <Button asChild size="sm" className="w-full gap-2 rounded-xl px-4 sm:w-auto">
             <Link href={`/pedidos/${pedidoLocal.id}`}>
               Ver detalhes
               <ArrowUpRight className="h-4 w-4" />
