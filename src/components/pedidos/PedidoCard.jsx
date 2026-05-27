@@ -128,19 +128,17 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
       }
     }
 
-    function handleViewportChange() {
+    function handleScroll() {
       closeMenus();
     }
 
     document.addEventListener("mousedown", handleOutsideClick);
     document.addEventListener("touchstart", handleOutsideClick);
-    window.addEventListener("scroll", handleViewportChange, true);
-    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleScroll, true);
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
       document.removeEventListener("touchstart", handleOutsideClick);
-      window.removeEventListener("scroll", handleViewportChange, true);
-      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleScroll, true);
     };
   }, [editingStatusFor, editingRastreioFor]);
 
