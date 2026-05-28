@@ -168,6 +168,12 @@ export async function atualizarPedido(id, payload, supabase = getSupabaseBrowser
   return data;
 }
 
+export async function excluirPedido(id, supabase = getSupabaseBrowserClient()) {
+  const { error } = await supabase.from("pedidos").delete().eq("id", id);
+  if (error) throw error;
+  return true;
+}
+
 export async function obterResumoDashboard(supabase = getSupabaseBrowserClient()) {
   const pedidos = await listarPedidos({}, supabase);
   const totalPedidos = pedidos.length;

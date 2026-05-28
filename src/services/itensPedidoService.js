@@ -64,3 +64,22 @@ export async function deletarItem(itemId, supabase = getSupabaseBrowserClient())
   const { error } = await supabase.from("itens_pedido").delete().eq("id", itemId);
   if (error) throw error;
 }
+
+export async function atualizarItemPedido(id, payload, supabase = getSupabaseBrowserClient()) {
+  const { data, error } = await supabase
+    .from("itens_pedido")
+    .update({
+      quantidade: Number(payload.quantidade) || 1,
+      nome_produto: payload.nome_produto,
+      tipo: payload.tipo || null,
+      tamanho: payload.tamanho || null,
+      personalizacao: payload.personalizacao || null,
+      observacao_status: payload.observacao_status || null,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}

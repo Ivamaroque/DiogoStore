@@ -5,6 +5,11 @@ import { createPortal } from "react-dom";
 import { CalendarDays, CreditCard, Package, Phone, Save, Truck, User, ChevronDown, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import EditarPedidoDialog from "./EditarPedidoDialog";
+import EditarItemPedidoDialog from "./EditarItemPedidoDialog";
+import ConfirmarRemoverItemDialog from "./ConfirmarRemoverItemDialog";
+import ConfirmarExcluirPedidoDialog from "./ConfirmarExcluirPedidoDialog";
+import { buscarPedidoPorId } from "@/services/pedidosService";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -114,6 +119,15 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
   }
 
   if (!pedido) return null;
+
+  async function reloadPedido() {
+    try {
+      const updated = await buscarPedidoPorId(pedido.id);
+      setPedido(updated);
+    } catch (e) {
+      console.error("Erro ao recarregar pedido:", e);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -276,6 +290,10 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
                         if (rect) setRastreioMenuRect(rect);
                       }}
                     />
+                    <div className="flex items-center gap-2">
+                      <EditarItemPedidoDialog item={item} onUpdated={() => void reloadPedido()} />
+                      <ConfirmarRemoverItemDialog item={item} itemCount={(pedido.itens_pedido || []).length} onRemoved={() => void reloadPedido()} />
+                    </div>
                   </div>
                 </div>
 
@@ -327,6 +345,11 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
           )}
         </CardContent>
       </Card>
+
+      <div className="flex flex-col gap-3 rounded-3xl border border-zinc-800 bg-zinc-950 p-4 sm:flex-row sm:items-center sm:justify-end sm:p-5">
+        <EditarPedidoDialog pedido={pedido} onUpdated={(p) => setPedido(p)} />
+        <ConfirmarExcluirPedidoDialog pedidoId={pedido.id} />
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="border-zinc-800 bg-zinc-900/95"><CardContent className="p-5"><p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Status resumido</p><p className="mt-2 text-lg font-semibold text-brand">{pedido.resumo_status}</p></CardContent></Card>
