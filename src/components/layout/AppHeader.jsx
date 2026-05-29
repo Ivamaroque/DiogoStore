@@ -18,8 +18,7 @@ export function AppHeader() {
 
   async function handleLogout() {
     await signOutUser();
-    router.push("/login");
-    router.refresh();
+    router.replace("/login");
   }
 
   return (

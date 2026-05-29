@@ -1,25 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export function usePerfilAtual(userId) {
-  const [perfil, setPerfil] = useState(null);
-  const [loading, setLoading] = useState(Boolean(userId));
-  const [error, setError] = useState(null);
+  const { user, perfil: perfilAutenticado, perfilLoading } = useAuth();
+  const [perfilLocal, setPerfilLocal] = useState(null);
+  const [loadingLocal, setLoadingLocal] = useState(Boolean(userId));
+  const [errorLocal, setErrorLocal] = useState(null);
+
+  const mesmoUsuarioLogado = Boolean(userId) && String(userId) === String(user?.id ?? "");
 
   useEffect(() => {
     let ativo = true;
 
     async function carregarPerfil() {
-      if (!userId) {
-        setPerfil(null);
-        setLoading(false);
+      if (!userId || mesmoUsuarioLogado) {
+        setPerfilLocal(null);
+        setLoadingLocal(false);
+        setErrorLocal(null);
         return;
       }
 
-      setLoading(true);
-      setError(null);
+      setLoadingLocal(true);
+      setErrorLocal(null);
 
       const supabase = getSupabaseBrowserClient();
       const { data, error: perfilError } = await supabase
@@ -31,13 +36,13 @@ export function usePerfilAtual(userId) {
       if (!ativo) return;
 
       if (perfilError) {
-        setError(perfilError);
-        setPerfil(null);
+        setErrorLocal(perfilError);
+        setPerfilLocal(null);
       } else {
-        setPerfil(data ?? null);
+        setPerfilLocal(data ?? null);
       }
 
-      setLoading(false);
+      setLoadingLocal(false);
     }
 
     void carregarPerfil();
@@ -45,7 +50,11 @@ export function usePerfilAtual(userId) {
     return () => {
       ativo = false;
     };
-  }, [userId]);
+  }, [mesmoUsuarioLogado, userId]);
 
-  return { perfil, loading, error };
+  return {
+    perfil: mesmoUsuarioLogado ? perfilAutenticado : perfilLocal,
+    loading: mesmoUsuarioLogado ? perfilLoading : loadingLocal,
+    error: mesmoUsuarioLogado ? null : errorLocal,
+  };
 }

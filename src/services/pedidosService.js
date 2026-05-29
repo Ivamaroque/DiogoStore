@@ -3,6 +3,25 @@ import { getResumoFinanceiro, getResumoPedido } from "@/lib/constants/status";
 import { parseCurrency } from "@/utils/currency";
 import { obterOuCriarRastreio } from "./rastreiosService";
 
+const pedidosInFlight = new Map();
+
+function dedupeInFlight(key, fetcher) {
+  if (pedidosInFlight.has(key)) {
+    return pedidosInFlight.get(key);
+  }
+
+  const promise = (async () => {
+    try {
+      return await fetcher();
+    } finally {
+      pedidosInFlight.delete(key);
+    }
+  })();
+
+  pedidosInFlight.set(key, promise);
+  return promise;
+}
+
 const PEDIDO_SELECT = `
   *,
   perfis (
@@ -51,51 +70,59 @@ function matchText(source, term) {
 }
 
 export async function listarPedidosPorPagina({ page = 1, pageSize = 10 } = {}, supabase = getSupabaseBrowserClient()) {
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const key = `listarPedidosPorPagina:${page}:${pageSize}`;
 
-  const { data, error, count } = await buildPedidoQuery(supabase).range(from, to);
+  return dedupeInFlight(key, async () => {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
 
-  if (error) throw error;
+    const { data, error, count } = await buildPedidoQuery(supabase).range(from, to);
 
-  const pedidos = (data ?? []).map(normalizePedido).filter(Boolean);
-  const total = count ?? 0;
+    if (error) throw error;
 
-  return {
-    pedidos,
-    total,
-    hasMore: to + 1 < total,
-  };
+    const pedidos = (data ?? []).map(normalizePedido).filter(Boolean);
+    const total = count ?? 0;
+
+    return {
+      pedidos,
+      total,
+      hasMore: to + 1 < total,
+    };
+  });
 }
 
 export async function listarPedidos({ termo = "", statusId = "", somenteComProblema = false, somenteProntos = false, somenteEntregues = false, somenteCancelados = false, somenteComRestante = false, rastreioEmGrupo = false } = {}, supabase = getSupabaseBrowserClient()) {
-  const { data, error } = await buildPedidoQuery(supabase);
-  if (error) throw error;
+  const key = `listarPedidos:${termo}:${statusId}:${somenteComProblema}:${somenteProntos}:${somenteEntregues}:${somenteCancelados}:${somenteComRestante}:${rastreioEmGrupo}`;
 
-  const termoLimpo = termo.trim().toLowerCase();
-  const pedidos = (data ?? []).map(normalizePedido);
+  return dedupeInFlight(key, async () => {
+    const { data, error } = await buildPedidoQuery(supabase);
+    if (error) throw error;
 
-  return pedidos.filter((pedido) => {
-    const itens = pedido.itens_pedido ?? [];
-    const correspondeTermo = !termoLimpo || matchText(pedido.id, termoLimpo) || matchText(pedido.nome_cliente, termoLimpo) || matchText(pedido.telefone, termoLimpo) || itens.some((item) => matchText(item.nome_produto, termoLimpo) || matchText(item.rastreios?.codigo_rastreio, termoLimpo));
-    const correspondeStatus = !statusId || itens.some((item) => String(item.status_item_id) === String(statusId));
-    const correspondeProblema = !somenteComProblema || itens.some((item) => Number(item.status_item_id) === 7);
-    const correspondePronto = !somenteProntos || itens.some((item) => Number(item.status_item_id) === 4);
-    const correspondeEntregue = !somenteEntregues || itens.some((item) => Number(item.status_item_id) === 5);
-    const correspondeCancelado = !somenteCancelados || itens.some((item) => Number(item.status_item_id) === 6);
-    const correspondeRestante = !somenteComRestante || Number(pedido.valor_restante) > 0;
-    const correspondeRastreioGrupo = !rastreioEmGrupo || itens.some((item) => item.rastreios?.rastreio_em_grupo);
+    const termoLimpo = termo.trim().toLowerCase();
+    const pedidos = (data ?? []).map(normalizePedido);
 
-    return (
-      correspondeTermo &&
-      correspondeStatus &&
-      correspondeProblema &&
-      correspondePronto &&
-      correspondeEntregue &&
-      correspondeCancelado &&
-      correspondeRestante &&
-      correspondeRastreioGrupo
-    );
+    return pedidos.filter((pedido) => {
+      const itens = pedido.itens_pedido ?? [];
+      const correspondeTermo = !termoLimpo || matchText(pedido.id, termoLimpo) || matchText(pedido.nome_cliente, termoLimpo) || matchText(pedido.telefone, termoLimpo) || itens.some((item) => matchText(item.nome_produto, termoLimpo) || matchText(item.rastreios?.codigo_rastreio, termoLimpo));
+      const correspondeStatus = !statusId || itens.some((item) => String(item.status_item_id) === String(statusId));
+      const correspondeProblema = !somenteComProblema || itens.some((item) => Number(item.status_item_id) === 7);
+      const correspondePronto = !somenteProntos || itens.some((item) => Number(item.status_item_id) === 4);
+      const correspondeEntregue = !somenteEntregues || itens.some((item) => Number(item.status_item_id) === 5);
+      const correspondeCancelado = !somenteCancelados || itens.some((item) => Number(item.status_item_id) === 6);
+      const correspondeRestante = !somenteComRestante || Number(pedido.valor_restante) > 0;
+      const correspondeRastreioGrupo = !rastreioEmGrupo || itens.some((item) => item.rastreios?.rastreio_em_grupo);
+
+      return (
+        correspondeTermo &&
+        correspondeStatus &&
+        correspondeProblema &&
+        correspondePronto &&
+        correspondeEntregue &&
+        correspondeCancelado &&
+        correspondeRestante &&
+        correspondeRastreioGrupo
+      );
+    });
   });
 }
 

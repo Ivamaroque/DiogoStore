@@ -32,8 +32,7 @@ export function LoginForm() {
 
     try {
       await signIn({ usuario, password });
-      router.push("/pedidos");
-      router.refresh();
+      router.replace("/pedidos");
     } catch (error) {
       setErro(error?.message || "Usuário ou senha inválidos");
     } finally {
