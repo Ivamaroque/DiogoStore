@@ -100,7 +100,7 @@ export function AuthProvider({ children }) {
       user,
       perfil,
       perfilLoading,
-      loading: loading || perfilLoading,
+      loading,
       isAuthenticated: Boolean(user),
     };
   }, [loading, perfil, perfilLoading, session]);
