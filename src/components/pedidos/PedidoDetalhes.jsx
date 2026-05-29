@@ -20,7 +20,7 @@ import { StatusBadge } from "./StatusBadge";
 import { RastreioBadge } from "./RastreioBadge";
 import { atualizarRastreioItem, atualizarStatusItem } from "@/services/itensPedidoService";
 import { obterOuCriarRastreio } from "@/services/rastreiosService";
-import { STATUS_FIXOS, getStatusBadgeStyle } from "@/lib/constants/status";
+import { STATUS_FIXOS, getStatusBadgeStyle, getStatusPorId } from "@/lib/constants/status";
 import { formatCurrency } from "@/utils/currency";
 import { formatDateTime } from "@/utils/dates";
 import { gerarTextoPedidoWhatsApp } from "@/utils/gerarTextoPedido";
@@ -49,10 +49,22 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
     try {
       const rastreio = await obterOuCriarRastreio({ codigo_rastreio: rastreioCodigo, rastreio_em_grupo: rastreioEmGrupo });
       const itemAtualizado = await atualizarRastreioItem({ itemId, rastreio_id: rastreio?.id ?? null });
+      const itemComStatusEnviado = await atualizarStatusItem({ itemId, status_item_id: 3 });
+      const statusEnviado = getStatusPorId(3);
 
       setPedido((current) => ({
         ...current,
-        itens_pedido: current.itens_pedido.map((item) => (item.id === itemId ? { ...item, rastreio_id: itemAtualizado.rastreio_id, rastreios: rastreio } : item)),
+        itens_pedido: current.itens_pedido.map((item) => (
+          item.id === itemId
+            ? {
+                ...item,
+                ...itemComStatusEnviado,
+                rastreio_id: itemAtualizado.rastreio_id,
+                rastreios: rastreio,
+                status_itens: statusEnviado,
+              }
+            : item
+        )),
       }));
 
       toast.success("Rastreio atualizado.");
