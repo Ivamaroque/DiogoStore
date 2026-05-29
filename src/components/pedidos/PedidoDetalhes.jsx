@@ -194,7 +194,6 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
                     <div className="grid gap-2 text-sm text-zinc-400 sm:grid-cols-2 lg:grid-cols-3">
                       <p>Tipo: <span className="text-white">{item.tipo || "—"}</span></p>
                       <p>Tamanho: <span className="text-white">{item.tamanho || "—"}</span></p>
-                      <p>Status: <span className="text-white">{item.status_itens?.nome || "—"}</span></p>
                     </div>
                     <div className="flex flex-wrap gap-2 lg:hidden">
                       <StatusBadge status={item.status_itens} />
@@ -290,7 +289,7 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
                         if (rect) setRastreioMenuRect(rect);
                       }}
                     />
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 border-none">
                       <EditarItemPedidoDialog item={item} onUpdated={() => void reloadPedido()} />
                       <ConfirmarRemoverItemDialog item={item} itemCount={(pedido.itens_pedido || []).length} onRemoved={() => void reloadPedido()} />
                     </div>
@@ -311,6 +310,12 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
                 <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Observação do status</p>
                   <p className="mt-1 text-sm text-white">{item.observacao_status || "Sem observação"}</p>
+                </div>
+
+                {/* Mobile controls: edit/remove buttons shown at bottom of the card */}
+                <div className="mt-4 flex gap-3 lg:hidden">
+                  <EditarItemPedidoDialog item={item} onUpdated={() => void reloadPedido()} triggerClassName="flex-1 justify-center py-3" triggerSize="default" triggerVariant="secondary" />
+                  <ConfirmarRemoverItemDialog item={item} itemCount={(pedido.itens_pedido || []).length} onRemoved={() => void reloadPedido()} triggerClassName="flex-1 justify-center py-3" triggerSize="default" triggerVariant="destructive" />
                 </div>
 
                 {typeof document !== "undefined" && rastreioAbertoId === item.id && rastreioMenuRect
@@ -346,15 +351,15 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
         </CardContent>
       </Card>
 
-      <div className="flex flex-col gap-3 rounded-3xl border border-zinc-800 bg-zinc-950 p-4 sm:flex-row sm:items-center sm:justify-end sm:p-5">
-        <EditarPedidoDialog pedido={pedido} onUpdated={(p) => setPedido(p)} />
-        <ConfirmarExcluirPedidoDialog pedidoId={pedido.id} />
-      </div>
-
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="border-zinc-800 bg-zinc-900/95"><CardContent className="p-5"><p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Status resumido</p><p className="mt-2 text-lg font-semibold text-brand">{pedido.resumo_status}</p></CardContent></Card>
         <Card className="border-zinc-800 bg-zinc-900/95"><CardContent className="p-5"><p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Itens com problema</p><p className="mt-2 text-lg font-semibold text-red-400">{pedido.itens_pedido?.filter((item) => Number(item.status_item_id) === 7).length || 0}</p></CardContent></Card>
         <Card className="border-zinc-800 bg-zinc-900/95"><CardContent className="p-5"><p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Itens entregues</p><p className="mt-2 text-lg font-semibold text-emerald-400">{pedido.itens_pedido?.filter((item) => Number(item.status_item_id) === 5).length || 0}</p></CardContent></Card>
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-3xl border border-zinc-800 bg-zinc-950 p-4 sm:flex-row sm:items-center sm:justify-end sm:p-5">
+        <EditarPedidoDialog pedido={pedido} onUpdated={(p) => setPedido(p)} />
+        <ConfirmarExcluirPedidoDialog pedidoId={pedido.id} />
       </div>
     </div>
   );

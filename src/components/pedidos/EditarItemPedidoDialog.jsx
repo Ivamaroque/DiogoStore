@@ -7,10 +7,10 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, Dialo
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { atualizarItemPedido } from "@/services/itensPedidoService";
 
-export function EditarItemPedidoDialog({ item, onUpdated }) {
+export function EditarItemPedidoDialog({ item, onUpdated, triggerClassName = "inline-flex items-center gap-2", triggerSize = "sm", triggerVariant = "ghost" }) {
   const [open, setOpen] = useState(false);
   const [nome, setNome] = useState("");
   const [quantidade, setQuantidade] = useState(1);
@@ -60,7 +60,7 @@ export function EditarItemPedidoDialog({ item, onUpdated }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="inline-flex items-center gap-2">
+        <Button variant={triggerVariant} size={triggerSize} className={triggerClassName}>
           <Pencil className="h-4 w-4" />
         </Button>
       </DialogTrigger>
@@ -84,12 +84,17 @@ export function EditarItemPedidoDialog({ item, onUpdated }) {
             </div>
             <div>
               <Label>Tipo</Label>
-              <Select value={tipo} onValueChange={(v) => setTipo(v)}>
-                <option value="">Selecione</option>
-                <option value="Infantil">Infantil</option>
-                <option value="Feminina">Feminina</option>
-                <option value="Masculina">Masculina</option>
-              </Select>
+                <Select value={tipo} onValueChange={(v) => setTipo(v)}>
+                  <SelectTrigger id="tipo">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* placeholder shown via SelectValue placeholder prop */}
+                    <SelectItem value="Infantil">Infantil</SelectItem>
+                    <SelectItem value="Feminina">Feminina</SelectItem>
+                    <SelectItem value="Masculina">Masculina</SelectItem>
+                  </SelectContent>
+                </Select>
             </div>
           </div>
 

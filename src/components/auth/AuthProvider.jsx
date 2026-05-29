@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useRef } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { buscarPerfilPorId } from "@/services/authService";
 
@@ -12,6 +12,8 @@ export function AuthProvider({ children }) {
   const [perfil, setPerfil] = useState(null);
   const [perfilLoading, setPerfilLoading] = useState(true);
   const [loading, setLoading] = useState(true);
+  const sessionTimeoutRef = useRef(null);
+  const userId = session?.user?.id ?? null;
 
   useEffect(() => {
     let isMounted = true;
@@ -24,33 +26,54 @@ export function AuthProvider({ children }) {
       if (error) {
         setSession(null);
         setLoading(false);
+        if (sessionTimeoutRef.current) {
+          clearTimeout(sessionTimeoutRef.current);
+          sessionTimeoutRef.current = null;
+        }
         return;
       }
 
       setSession(data.session ?? null);
       setLoading(false);
+      if (sessionTimeoutRef.current) {
+        clearTimeout(sessionTimeoutRef.current);
+        sessionTimeoutRef.current = null;
+      }
     }
 
     void carregarSessao();
+
+    // Fallback: if session check hangs for any reason, stop showing global loading after a short timeout
+    sessionTimeoutRef.current = setTimeout(() => {
+      if (isMounted) setLoading(false);
+      sessionTimeoutRef.current = null;
+    }, 2500);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!isMounted) return;
       setSession(nextSession ?? null);
       setLoading(false);
+      if (sessionTimeoutRef.current) {
+        clearTimeout(sessionTimeoutRef.current);
+        sessionTimeoutRef.current = null;
+      }
     });
 
     return () => {
       isMounted = false;
+      if (sessionTimeoutRef.current) {
+        clearTimeout(sessionTimeoutRef.current);
+        sessionTimeoutRef.current = null;
+      }
       subscription.unsubscribe();
     };
   }, [supabase]);
 
   useEffect(() => {
     let isMounted = true;
-    const user = session?.user ?? null;
 
     async function carregarPerfil() {
-      if (!user) {
+      if (!userId) {
         if (!isMounted) return;
         setPerfil(null);
         setPerfilLoading(false);
@@ -60,14 +83,14 @@ export function AuthProvider({ children }) {
       setPerfilLoading(true);
 
       try {
-        const perfilAtual = await buscarPerfilPorId(user.id, supabase);
+        const perfilAtual = await buscarPerfilPorId(userId, supabase);
 
         if (!isMounted) return;
 
         setPerfil(
           perfilAtual ?? {
-            id: user.id,
-            nome_completo: user.email,
+            id: userId,
+            nome_completo: session?.user?.email,
             funcao: "Funcionário",
           },
         );
@@ -75,8 +98,8 @@ export function AuthProvider({ children }) {
         if (!isMounted) return;
 
         setPerfil({
-          id: user.id,
-          nome_completo: user.email,
+          id: userId,
+          nome_completo: session?.user?.email,
           funcao: "Funcionário",
         });
       } finally {
@@ -90,7 +113,7 @@ export function AuthProvider({ children }) {
     return () => {
       isMounted = false;
     };
-  }, [session, supabase]);
+  }, [session?.user?.email, supabase, userId]);
 
   const value = useMemo(() => {
     const user = session?.user ?? null;

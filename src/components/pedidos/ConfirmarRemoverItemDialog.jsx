@@ -7,7 +7,7 @@ import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
 import { Button } from "@/components/ui/button";
 import { deletarItem } from "@/services/itensPedidoService";
 
-export function ConfirmarRemoverItemDialog({ item, onRemoved, itemCount }) {
+export function ConfirmarRemoverItemDialog({ item, onRemoved, itemCount, triggerClassName = "text-red-400", triggerSize = "sm", triggerVariant = "ghost" }) {
   const [open, setOpen] = React.useState(false);
 
   async function handleConfirm() {
@@ -31,7 +31,7 @@ export function ConfirmarRemoverItemDialog({ item, onRemoved, itemCount }) {
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="text-red-400">
+        <Button variant={triggerVariant} size={triggerSize} className={triggerClassName}>
           <Trash2 className="h-4 w-4" />
         </Button>
       </AlertDialogTrigger>
