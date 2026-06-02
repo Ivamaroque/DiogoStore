@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { atualizarItemPedido } from "@/services/itensPedidoService";
+import { upsertPersonalizacaoItem } from "@/services/personalizacoesService";
+import { getPersonalizacaoDoItem } from "@/utils/personalizacao";
 
 export function EditarItemPedidoDialog({ item, onUpdated, triggerClassName = "inline-flex items-center gap-2", triggerSize = "sm", triggerVariant = "ghost" }) {
   const [open, setOpen] = useState(false);
@@ -16,7 +18,9 @@ export function EditarItemPedidoDialog({ item, onUpdated, triggerClassName = "in
   const [quantidade, setQuantidade] = useState(1);
   const [tipo, setTipo] = useState("");
   const [tamanho, setTamanho] = useState("");
-  const [personalizacao, setPersonalizacao] = useState("");
+  const [nomePersonalizado, setNomePersonalizado] = useState("");
+  const [numeroPersonalizado, setNumeroPersonalizado] = useState("");
+  const [observacaoAntigaPersonalizacao, setObservacaoAntigaPersonalizacao] = useState("");
   const [observacao, setObservacao] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -26,7 +30,14 @@ export function EditarItemPedidoDialog({ item, onUpdated, triggerClassName = "in
     setQuantidade(item.quantidade ?? 1);
     setTipo(item.tipo ?? "");
     setTamanho(item.tamanho ?? "");
-    setPersonalizacao(item.personalizacao ?? "");
+    const personalizacao = getPersonalizacaoDoItem(item);
+    const nome = personalizacao?.nome_personalizado ?? "";
+    const numero = personalizacao?.numero_personalizado ?? "";
+    const observacaoAntiga = personalizacao?.observacao_personalizacao ?? "";
+
+    setNomePersonalizado(nome);
+    setNumeroPersonalizado(numero);
+    setObservacaoAntigaPersonalizacao(!nome?.trim() && !numero?.trim() ? observacaoAntiga : "");
     setObservacao(item.observacao_status ?? "");
   }, [item, open]);
 
@@ -42,8 +53,14 @@ export function EditarItemPedidoDialog({ item, onUpdated, triggerClassName = "in
         nome_produto: nome,
         tipo,
         tamanho: tamanho || null,
-        personalizacao: personalizacao || null,
         observacao_status: observacao || null,
+      });
+
+      await upsertPersonalizacaoItem({
+        item_id: item.id,
+        nome_personalizado: nomePersonalizado,
+        numero_personalizado: numeroPersonalizado,
+        preservarObservacaoAntiga: Boolean(observacaoAntigaPersonalizacao?.trim()) && !nomePersonalizado?.trim() && !numeroPersonalizado?.trim(),
       });
 
       toast.success("Item atualizado com sucesso.");
@@ -103,10 +120,21 @@ export function EditarItemPedidoDialog({ item, onUpdated, triggerClassName = "in
             <Input value={tamanho} onChange={(e) => setTamanho(e.target.value)} />
           </div>
 
-          <div>
-            <Label>Personalização</Label>
-            <Input value={personalizacao} onChange={(e) => setPersonalizacao(e.target.value)} />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <Label>Nome personalizado</Label>
+              <Input value={nomePersonalizado} onChange={(e) => setNomePersonalizado(e.target.value)} placeholder="Ex: Fulano" />
+            </div>
+
+            <div>
+              <Label>Número personalizado</Label>
+              <Input value={numeroPersonalizado} onChange={(e) => setNumeroPersonalizado(e.target.value)} placeholder="Ex: 10" />
+            </div>
           </div>
+
+          {observacaoAntigaPersonalizacao ? (
+            <p className="text-sm text-zinc-500">Personalização antiga: {observacaoAntigaPersonalizacao}</p>
+          ) : null}
 
           <div>
             <Label>Observação do status</Label>

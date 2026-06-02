@@ -24,6 +24,7 @@ import { STATUS_FIXOS, getStatusBadgeStyle, getStatusPorId } from "@/lib/constan
 import { formatCurrency } from "@/utils/currency";
 import { formatDateTime } from "@/utils/dates";
 import { gerarTextoPedidoWhatsApp } from "@/utils/gerarTextoPedido";
+import { formatarPersonalizacaoItem } from "@/utils/personalizacao";
 
 export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio = {} }) {
   const [pedido, setPedido] = useState(pedidoInicial);
@@ -311,7 +312,7 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
                 <div className="mt-4 grid gap-3 text-sm text-zinc-400 sm:grid-cols-2">
                   <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
                     <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Personalização</p>
-                    <p className="mt-1 text-white">{item.personalizacao || "—"}</p>
+                    <p className="mt-1 text-white">{formatarPersonalizacaoItem(item)}</p>
                   </div>
                   <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
                     <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Última atualização</p>

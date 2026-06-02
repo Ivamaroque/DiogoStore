@@ -1,3 +1,5 @@
+import { getPersonalizacaoDoItem } from "@/utils/personalizacao";
+
 export function gerarTextoPedidoWhatsApp(pedido) {
   const formatCurrency = (value) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -21,32 +23,45 @@ export function gerarTextoPedidoWhatsApp(pedido) {
   const vendedor = pedido?.perfis?.nome_completo || "Não informado";
 
   const itens = pedido?.itens_pedido || [];
-
   const linhasItens = itens
     .map((item) => {
       const quantidade = item?.quantidade || 1;
       const nomeProduto = item?.nome_produto || "Produto não informado";
       const tipo = item?.tipo || "Tipo não informado";
       const tamanho = item?.tamanho || "sem tamanho";
+      const codigoRastreio = item?.rastreios?.codigo_rastreio?.trim();
+      const personalizacao = getPersonalizacaoDoItem(item);
+      const nomePersonalizado = personalizacao?.nome_personalizado?.trim();
+      const numeroPersonalizado = personalizacao?.numero_personalizado?.trim();
+      const observacao = personalizacao?.observacao_personalizacao?.trim() || item?.observacao_status?.trim() || "";
+      const personalizacaoLegada = item?.personalizacao?.trim() || "";
 
-      const codigoRastreio = item?.rastreios?.codigo_rastreio;
-      const personalizacao = item?.personalizacao && item.personalizacao.trim ? item.personalizacao.trim() : "";
+      const linhas = [];
+      const tituloItem = codigoRastreio ? `${quantidade}x ${nomeProduto} | ${codigoRastreio}` : `${quantidade}x ${nomeProduto}`;
 
-      const baseItem = [`${quantidade}x ${nomeProduto}`, tipo, tamanho].filter(Boolean).join(", ");
+      linhas.push(tituloItem);
+      linhas.push(`- Tipo: ${tipo}`);
+      linhas.push(`- Tamanho: ${tamanho}`);
 
-      const partes = [baseItem];
-
-      if (personalizacao) {
-        partes.push(personalizacao);
+      if (nomePersonalizado) {
+        linhas.push(`- Nome: ${nomePersonalizado}`);
       }
 
-      if (codigoRastreio) {
-        partes.push(codigoRastreio);
+      if (numeroPersonalizado) {
+        linhas.push(`- Número: ${numeroPersonalizado}`);
       }
 
-      return partes.join(" | ");
+      if (!nomePersonalizado && !numeroPersonalizado && personalizacaoLegada) {
+        linhas.push(`- Personalização: ${personalizacaoLegada}`);
+      }
+
+      if (observacao) {
+        linhas.push(`> Observação: ${observacao}`);
+      }
+
+      return linhas.join("\n");
     })
-    .join("\n");
+    .join("\n\n");
 
   return `ENCOMENDA
 
@@ -71,8 +86,7 @@ ${formatCurrency(pedido?.valor_pago)} (${pedido?.forma_pagamento || "Não inform
 RESTA PAGAR:
 ${formatCurrency(pedido?.valor_restante)}
 
-OBSERVAÇÕES:
-* Sem personalização
+Informações adicionais:
 * Data da encomenda: ${formatDate(pedido?.criado_em)}
 * Prazo estimado: 30 - 40 dias úteis para entrega 🚚`;
 }

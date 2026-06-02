@@ -2,6 +2,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getResumoFinanceiro, getResumoPedido } from "@/lib/constants/status";
 import { parseCurrency } from "@/utils/currency";
 import { obterOuCriarRastreio } from "./rastreiosService";
+import { getPersonalizacaoDoItem } from "@/utils/personalizacao";
 
 const pedidosInFlight = new Map();
 
@@ -31,6 +32,13 @@ const PEDIDO_SELECT = `
   ),
   itens_pedido (
     *,
+    personalizacoes_item (
+      id,
+      item_id,
+      nome_personalizado,
+      numero_personalizado,
+      observacao_personalizacao
+    ),
     status_itens (
       id,
       nome,
@@ -53,7 +61,12 @@ function normalizePedido(pedido) {
   if (!pedido) return null;
 
   const financeiro = getResumoFinanceiro(pedido.valor_total, pedido.valor_pago);
-  const itens = [...(pedido.itens_pedido ?? [])].sort((a, b) => new Date(a.criado_em ?? 0) - new Date(b.criado_em ?? 0));
+  const itens = [...(pedido.itens_pedido ?? [])]
+    .map((item) => ({
+      ...item,
+      personalizacoes_item: getPersonalizacaoDoItem(item),
+    }))
+    .sort((a, b) => new Date(a.criado_em ?? 0) - new Date(b.criado_em ?? 0));
 
   return {
     ...pedido,
@@ -154,7 +167,7 @@ export async function criarPedidoCompleto({ pedido, itens, criadoPor }, supabase
 
   if (pedidoError) throw pedidoError;
 
-  const itensCriados = [];
+  const itensComRastreio = [];
 
   for (const item of itens) {
     const rastreio = await obterOuCriarRastreio(
@@ -165,28 +178,49 @@ export async function criarPedidoCompleto({ pedido, itens, criadoPor }, supabase
       supabase,
     );
 
-    const { data: itemCriado, error: itemError } = await supabase
-      .from("itens_pedido")
-      .insert({
-        pedido_id: pedidoCriado.id,
-        rastreio_id: rastreio?.id ?? null,
-        quantidade: Number(item.quantidade ?? 1),
-        nome_produto: item.nome_produto,
-        tipo: item.tipo || null,
-        tamanho: item.tamanho || null,
-        personalizacao: item.personalizacao || null,
-        observacao_status: item.observacao_status || null,
-        ultima_atualizacao_status: new Date().toISOString(),
-        status_item_id: Number(item.status_item_id ?? 1),
-      })
-      .select("*")
-      .single();
-
-    if (itemError) throw itemError;
-    itensCriados.push(itemCriado);
+    itensComRastreio.push({
+      ...item,
+      rastreio_id: rastreio?.id ?? null,
+    });
   }
 
-  return { pedido: pedidoCriado, itens: itensCriados };
+  const itensPayload = itensComRastreio.map((item) => ({
+    pedido_id: pedidoCriado.id,
+    rastreio_id: item.rastreio_id ?? null,
+    quantidade: Number(item.quantidade ?? 1),
+    nome_produto: item.nome_produto,
+    tipo: item.tipo || null,
+    tamanho: item.tamanho || null,
+    observacao_status: item.observacao_status || null,
+    ultima_atualizacao_status: new Date().toISOString(),
+    status_item_id: Number(item.status_item_id ?? 1),
+  }));
+
+  const { data: itensCriados, error: itensError } = await supabase.from("itens_pedido").insert(itensPayload).select("*");
+  if (itensError) throw itensError;
+
+  const personalizacoesPayload = (itensCriados ?? [])
+    .map((itemCriado, index) => {
+      const itemOriginal = itensComRastreio[index] ?? {};
+      const nome = itemOriginal.nome_personalizado?.trim() || null;
+      const numero = itemOriginal.numero_personalizado?.trim() || null;
+
+      if (!nome && !numero) return null;
+
+      return {
+        item_id: itemCriado.id,
+        nome_personalizado: nome,
+        numero_personalizado: numero,
+      };
+    })
+    .filter(Boolean);
+
+  if (personalizacoesPayload.length > 0) {
+    const { error: personalizacoesError } = await supabase.from("personalizacoes_item").insert(personalizacoesPayload);
+    if (personalizacoesError) throw personalizacoesError;
+  }
+
+  return { pedido: pedidoCriado, itens: itensCriados ?? [] };
 }
 
 export async function atualizarPedido(id, payload, supabase = getSupabaseBrowserClient()) {

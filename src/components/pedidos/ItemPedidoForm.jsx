@@ -59,9 +59,14 @@ export function ItemPedidoForm({ item, onChange, onAdicionar, showStatusBadge = 
           <Input value={item.tamanho} onChange={(event) => updateField("tamanho", event.target.value)} placeholder="M, G, 42..." />
         </div>
 
-        <div className="space-y-2 md:col-span-2">
-          <Label>Personalização</Label>
-          <Textarea value={item.personalizacao} onChange={(event) => updateField("personalizacao", event.target.value)} placeholder="Detalhes da arte, nome, cor..." />
+        <div className="space-y-2">
+          <Label>Nome personalizado</Label>
+          <Input value={item.nome_personalizado || ""} onChange={(event) => updateField("nome_personalizado", event.target.value)} placeholder="Ex: Fulano" />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Número personalizado</Label>
+          <Input value={item.numero_personalizado || ""} onChange={(event) => updateField("numero_personalizado", event.target.value)} placeholder="Ex: 10" />
         </div>
 
         <div className="space-y-2 md:col-span-2">

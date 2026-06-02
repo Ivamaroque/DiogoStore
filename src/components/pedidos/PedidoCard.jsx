@@ -19,6 +19,7 @@ import { STATUS_FIXOS } from "@/lib/constants/status";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { atualizarPedido } from "@/services/pedidosService";
+import { formatarPersonalizacaoItem } from "@/utils/personalizacao";
 
 export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
   const router = useRouter();
@@ -253,7 +254,7 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
                   <p className="min-w-0 truncate">Tamanho</p>
                   <p className="justify-self-end truncate text-right font-semibold text-white">{item.tamanho || '—'}</p>
                   <p className="min-w-0 truncate">Personalização</p>
-                  <p className="justify-self-end truncate text-right font-semibold text-white">{item.personalizacao || '—'}</p>
+                  <p className="justify-self-end truncate text-right font-semibold text-white">{formatarPersonalizacaoItem(item)}</p>
                 </div>
               </div>
 

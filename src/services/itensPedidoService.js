@@ -8,7 +8,6 @@ export async function criarItensPedido({ pedidoId, itens, supabase = getSupabase
     nome_produto: item.nome_produto,
     tipo: item.tipo ?? null,
     tamanho: item.tamanho ?? null,
-    personalizacao: item.personalizacao ?? null,
     observacao_status: item.observacao_status ?? null,
     ultima_atualizacao_status: new Date().toISOString(),
     status_item_id: Number(item.status_item_id ?? 1),
@@ -17,7 +16,30 @@ export async function criarItensPedido({ pedidoId, itens, supabase = getSupabase
   const { data, error } = await supabase.from("itens_pedido").insert(payload).select("*");
   if (error) throw error;
 
-  return data ?? [];
+  const itensCriados = data ?? [];
+
+  const personalizacoesPayload = itensCriados
+    .map((itemCriado, index) => {
+      const itemOriginal = itens[index] ?? {};
+      const nome = itemOriginal.nome_personalizado?.trim() || null;
+      const numero = itemOriginal.numero_personalizado?.trim() || null;
+
+      if (!nome && !numero) return null;
+
+      return {
+        item_id: itemCriado.id,
+        nome_personalizado: nome,
+        numero_personalizado: numero,
+      };
+    })
+    .filter(Boolean);
+
+  if (personalizacoesPayload.length > 0) {
+    const { error: personalizacoesError } = await supabase.from("personalizacoes_item").insert(personalizacoesPayload);
+    if (personalizacoesError) throw personalizacoesError;
+  }
+
+  return itensCriados;
 }
 
 export async function atualizarStatusItem({ itemId, status_item_id, observacao_status }, supabase = getSupabaseBrowserClient()) {
@@ -73,7 +95,6 @@ export async function atualizarItemPedido(id, payload, supabase = getSupabaseBro
       nome_produto: payload.nome_produto,
       tipo: payload.tipo || null,
       tamanho: payload.tamanho || null,
-      personalizacao: payload.personalizacao || null,
       observacao_status: payload.observacao_status || null,
     })
     .eq("id", id)

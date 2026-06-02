@@ -18,14 +18,17 @@ import { formatPhone } from "@/utils/masks";
 import { StatusBadge } from "./StatusBadge";
 import { formatCurrency } from "@/utils/currency";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { temPersonalizacao } from "@/utils/personalizacao";
 
 const itemPadrao = {
   quantidade: 1,
   nome_produto: "",
   tipo: "",
   tamanho: "",
-  personalizacao: "",
+  nome_personalizado: "",
+  numero_personalizado: "",
   observacao_status: "",
+  rastreio_id: null,
   status_item_id: 1,
 };
 
@@ -160,7 +163,7 @@ export function PedidoForm() {
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <StatusBadge status={1} />
-                        {item.personalizacao ? <Badge variant="default">Personalização adicionada</Badge> : null}
+                        {temPersonalizacao(item) ? <Badge variant="default">Personalização adicionada</Badge> : null}
                       </div>
                     </div>
                   ))}
