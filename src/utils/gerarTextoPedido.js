@@ -33,7 +33,7 @@ export function gerarTextoPedidoWhatsApp(pedido) {
       const personalizacao = getPersonalizacaoDoItem(item);
       const nomePersonalizado = personalizacao?.nome_personalizado?.trim();
       const numeroPersonalizado = personalizacao?.numero_personalizado?.trim();
-      const observacao = personalizacao?.observacao_personalizacao?.trim() || item?.observacao_status?.trim() || "";
+      const observacao = item?.observacao_status?.trim() || "";
       const personalizacaoLegada = item?.personalizacao?.trim() || "";
 
       const linhas = [];
