@@ -1,5 +1,5 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { getResumoFinanceiro, getResumoPedido, getStatusPorId } from "@/lib/constants/status";
+import { getResumoFinanceiro, getResumoPedido } from "@/lib/constants/status";
 import { parseCurrency } from "@/utils/currency";
 import { obterOuCriarRastreio } from "./rastreiosService";
 import { getPersonalizacaoDoItem } from "@/utils/personalizacao";
@@ -66,7 +66,6 @@ function normalizePedido(pedido) {
     .map((item) => ({
       ...item,
       personalizacoes_item: getPersonalizacaoDoItem(item),
-      status_itens: getStatusPorId(item.status_item_id) ?? item.status_itens,
     }))
     .sort((a, b) => new Date(a.criado_em ?? 0) - new Date(b.criado_em ?? 0));
 

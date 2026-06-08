@@ -21,7 +21,10 @@ function dedupeInFlight(key, fetcher) {
 
 export async function listarStatusItens(supabase = getSupabaseBrowserClient()) {
   return dedupeInFlight("listarStatusItens", async () => {
-    const { data, error } = await supabase.from("status_itens").select("*").order("id", { ascending: true });
+    const { data, error } = await supabase
+      .from("status_itens")
+      .select("id, nome, descricao, cor")
+      .order("id", { ascending: true });
 
     if (error) throw error;
     return data ?? [];

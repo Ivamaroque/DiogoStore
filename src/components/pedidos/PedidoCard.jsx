@@ -11,7 +11,7 @@ import { formatCurrency } from "@/utils/currency";
 import { formatDateTime } from "@/utils/dates";
 import { RastreioBadge } from "./RastreioBadge";
 import { StatusBadge } from "./StatusBadge";
-import { getStatusBadgeStyle, getStatusPorId, getStatusResumoPedido, STATUS_FIXOS } from "@/lib/constants/status";
+import { getStatusBadgeStyle, getStatusDoItem, getStatusPorId, getStatusResumoPedido } from "@/lib/constants/status";
 import { atualizarStatusItem, atualizarRastreioItem } from "@/services/itensPedidoService";
 import { obterOuCriarRastreio } from "@/services/rastreiosService";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ import { buscarPedidoPorId } from "@/services/pedidosService";
 import { formatarPersonalizacaoItem } from "@/utils/personalizacao";
 import { RegistrarPagamentoDialog } from "./RegistrarPagamentoDialog";
 
-export function PedidoCard({ pedido, contagemPorRastreio = {}, onPedidoAtualizado }) {
+export function PedidoCard({ pedido, statusItens = [], contagemPorRastreio = {}, onPedidoAtualizado }) {
   const router = useRouter();
   const [pedidoLocal, setPedidoLocal] = useState(pedido);
   const [editingStatusFor, setEditingStatusFor] = useState(null);
@@ -42,8 +42,9 @@ export function PedidoCard({ pedido, contagemPorRastreio = {}, onPedidoAtualizad
   const itensComStatusAtual = itensPedido.map((item) => ({
     ...item,
     status_item_id: statusMap[item.id]?.id ?? item.status_item_id,
+    status_itens: statusMap[item.id] ?? item.status_itens,
   }));
-  const statusResumoPedido = getStatusResumoPedido(itensComStatusAtual);
+  const statusResumoPedido = getStatusResumoPedido(itensComStatusAtual, statusItens);
 
   function getMenuPlacement(rect, width, height) {
     const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 0;
@@ -80,7 +81,7 @@ export function PedidoCard({ pedido, contagemPorRastreio = {}, onPedidoAtualizad
       setSaving(true);
       const rastreio = await obterOuCriarRastreio({ codigo_rastreio: rastreioValue, rastreio_em_grupo: rastreioEmGrupo });
       const itemAtualizado = await atualizarRastreioItem({ itemId: item.id, rastreio_id: rastreio?.id ?? null });
-      const statusEnviado = getStatusPorId(itemAtualizado?.status_item_id);
+      const statusEnviado = getStatusPorId(itemAtualizado?.status_item_id, statusItens);
 
       setPedidoLocal((current) => ({
         ...current,
@@ -215,7 +216,7 @@ export function PedidoCard({ pedido, contagemPorRastreio = {}, onPedidoAtualizad
         <div className="space-y-3">
           {pedidoLocal.itens_pedido?.map((item) => (
             (() => {
-              const current = statusMap[item.id] ?? getStatusPorId(item.status_item_id) ?? item.status_itens;
+              const current = statusMap[item.id] ?? getStatusDoItem(item, statusItens);
               const isStatusOpen = editingStatusFor === item.id;
               const isRastreioOpen = editingRastreioFor === item.id;
 
@@ -397,7 +398,7 @@ export function PedidoCard({ pedido, contagemPorRastreio = {}, onPedidoAtualizad
                   style={getMenuPlacement(statusMenuRect, 320, 360)}
                 >
                   <div className="max-h-[min(360px,calc(100vh-2rem))] overflow-auto">
-                    {STATUS_FIXOS.map((s) => (
+                    {statusItens.map((s) => (
                       <button
                         key={s.id}
                         className={"flex w-full items-start justify-between gap-3 rounded-md px-3 py-2 text-left text-sm " + (String(s.id) === String(current?.id ?? item.status_item_id) ? "bg-zinc-900 text-white" : "text-zinc-300 hover:bg-zinc-900")}

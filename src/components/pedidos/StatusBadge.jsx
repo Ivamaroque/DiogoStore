@@ -1,11 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { getStatusBadgeStyle, getStatusPorId } from "@/lib/constants/status";
 
-export function StatusBadge({ status, className = "" }) {
-  const statusFixo = getStatusPorId(typeof status === "object" ? status?.id : status);
+export function StatusBadge({ status, statusItens = [], className = "" }) {
   const statusData = typeof status === "object"
-    ? { ...statusFixo, ...status, cor: status?.cor || statusFixo?.cor }
-    : statusFixo;
+    ? status
+    : getStatusPorId(status, statusItens);
 
   if (!statusData) {
     return <Badge variant="default" className={className}>Sem status</Badge>;

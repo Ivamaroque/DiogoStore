@@ -20,7 +20,7 @@ import { StatusBadge } from "./StatusBadge";
 import { RastreioBadge } from "./RastreioBadge";
 import { atualizarRastreioItem, atualizarStatusItem } from "@/services/itensPedidoService";
 import { obterOuCriarRastreio } from "@/services/rastreiosService";
-import { STATUS_FIXOS, getStatusBadgeStyle, getStatusPorId, getStatusResumoPedido } from "@/lib/constants/status";
+import { getStatusBadgeStyle, getStatusDoItem, getStatusPorId, getStatusResumoPedido } from "@/lib/constants/status";
 import { formatCurrency } from "@/utils/currency";
 import { formatDateTime } from "@/utils/dates";
 import { gerarTextoPedidoWhatsApp } from "@/utils/gerarTextoPedido";
@@ -51,14 +51,14 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
     }),
     [pedido],
   );
-  const statusResumoPedido = getStatusResumoPedido(pedido?.itens_pedido);
+  const statusResumoPedido = getStatusResumoPedido(pedido?.itens_pedido, statusItens);
 
   async function salvarRastreio(itemId) {
     setSalvandoRastreio(true);
     try {
       const rastreio = await obterOuCriarRastreio({ codigo_rastreio: rastreioCodigo, rastreio_em_grupo: rastreioEmGrupo });
       const itemAtualizado = await atualizarRastreioItem({ itemId, rastreio_id: rastreio?.id ?? null });
-      const statusEnviado = getStatusPorId(itemAtualizado.status_item_id);
+      const statusEnviado = getStatusPorId(itemAtualizado.status_item_id, statusItens);
 
       setPedido((current) => ({
         ...current,
@@ -303,7 +303,7 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
                       <p>Tamanho: <span className="text-white">{item.tamanho || "—"}</span></p>
                     </div>
                     <div className="flex flex-wrap gap-2 lg:hidden">
-                      <StatusBadge status={getStatusPorId(item.status_item_id) ?? item.status_itens} />
+                      <StatusBadge status={getStatusDoItem(item, statusItens)} />
                       <RastreioBadge
                         item={item}
                         rastreio={item.rastreios}
@@ -340,16 +340,16 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
                           setEditingStatusFor(item.id);
                         }}
                         className="inline-flex items-center gap-2 rounded-full border border-zinc-800 px-3 py-1 text-sm"
-                        style={{ backgroundColor: getStatusBadgeStyle(getStatusPorId(item.status_item_id)?.cor ?? item.status_itens?.cor).backgroundColor, borderColor: getStatusBadgeStyle(getStatusPorId(item.status_item_id)?.cor ?? item.status_itens?.cor).borderColor, color: getStatusBadgeStyle(getStatusPorId(item.status_item_id)?.cor ?? item.status_itens?.cor).color }}
+                        style={getStatusBadgeStyle(getStatusDoItem(item, statusItens)?.cor)}
                       >
-                        <span className="text-xs">{getStatusPorId(item.status_item_id)?.nome ?? item.status_itens?.nome ?? "Status"}</span>
+                        <span className="text-xs">{getStatusDoItem(item, statusItens)?.nome ?? "Sem status"}</span>
                         <ChevronDown className="h-4 w-4 text-zinc-200" />
                       </button>
 
                       {editingStatusFor === item.id ? (
                         <div className="absolute right-0 z-50 mt-2 w-64 rounded-xl border border-zinc-800 bg-zinc-950 p-2 shadow-2xl">
                           <div className="max-h-60 overflow-auto">
-                            {STATUS_FIXOS.map((s) => (
+                            {statusItens.map((s) => (
                               <button
                                 key={s.id}
                                 className={"flex w-full items-start justify-between gap-3 rounded-md px-3 py-2 text-left text-sm " + (String(s.id) === String(item.status_item_id) ? "bg-zinc-900 text-white" : "text-zinc-300 hover:bg-zinc-900")}
@@ -358,7 +358,11 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
                                     const atualizado = await atualizarStatusItem({ itemId: item.id, status_item_id: Number(s.id) });
                                     setPedido((current) => ({
                                       ...current,
-                                      itens_pedido: current.itens_pedido.map((it) => (it.id === item.id ? { ...it, ...atualizado } : it)),
+                                      itens_pedido: current.itens_pedido.map((it) => (
+                                        it.id === item.id
+                                          ? { ...it, ...atualizado, status_itens: s }
+                                          : it
+                                      )),
                                     }));
                                     toast.success("Status atualizado.");
                                   } catch (e) {

@@ -10,13 +10,16 @@ import { PedidoCard } from "./PedidoCard";
 import { contarItensPorRastreio } from "@/utils/rastreios";
 import { sincronizarRastreiosEmGrupo } from "@/services/rastreiosService";
 import { listarPedidosPorPagina } from "@/services/pedidosService";
+import { getStatusResumoPedido } from "@/lib/constants/status";
+import { useStatusItens } from "@/hooks/useStatusItens";
 
 const PAGE_SIZE = 10;
 
 export function ListaPedidos() {
+  const { statusItens } = useStatusItens();
   const [pedidos, setPedidos] = useState([]);
   const [termo, setTermo] = useState("");
-  const [abaAtiva, setAbaAtiva] = useState("todos");
+  const [abaAtiva, setAbaAtiva] = useState("aberto");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -73,23 +76,6 @@ export function ListaPedidos() {
     void sincronizarRastreiosEmGrupo(contagemPorRastreio).catch(() => {});
   }, [contagemPorRastreio]);
 
-  const filtroAtivo = useMemo(() => {
-    switch (abaAtiva) {
-      case "aberto":
-        return { somenteComRestante: true };
-      case "pronto":
-        return { somenteProntos: true };
-      case "entregue":
-        return { somenteEntregues: true };
-      case "problema":
-        return { somenteComProblema: true };
-      case "cancelado":
-        return { somenteCancelados: true };
-      default:
-        return {};
-    }
-  }, [abaAtiva]);
-
   const pedidosFiltrados = useMemo(() => {
     const termoLimpo = termo.trim().toLowerCase();
 
@@ -106,28 +92,20 @@ export function ListaPedidos() {
             String(item.rastreios?.codigo_rastreio ?? "").toLowerCase().includes(termoLimpo),
         );
 
+      const statusResumo = getStatusResumoPedido(itens, statusItens);
       const correspondeStatus =
-        !filtroAtivo.somenteComRestante &&
-        !filtroAtivo.somenteProntos &&
-        !filtroAtivo.somenteEntregues &&
-        !filtroAtivo.somenteComProblema &&
-        !filtroAtivo.somenteCancelados
-          ? true
-          : (filtroAtivo.somenteComRestante && Number(pedido.valor_restante) > 0) ||
-            (filtroAtivo.somenteProntos && itens.some((item) => Number(item.status_item_id) === 4)) ||
-            (filtroAtivo.somenteEntregues && itens.some((item) => Number(item.status_item_id) === 5)) ||
-            (filtroAtivo.somenteComProblema && itens.some((item) => Number(item.status_item_id) === 7)) ||
-            (filtroAtivo.somenteCancelados && itens.some((item) => Number(item.status_item_id) === 6));
+        abaAtiva === "todos" ||
+        statusResumo?.chave === abaAtiva;
 
       return correspondeTermo && correspondeStatus;
     });
-  }, [filtroAtivo, pedidos, termo]);
+  }, [abaAtiva, pedidos, statusItens, termo]);
 
   const filtrosRapidos = [
     { id: "todos", label: "Todos" },
     { id: "aberto", label: "Em aberto" },
     { id: "pronto", label: "Pronto para retirada" },
-    { id: "entregue", label: "Entregue" },
+    { id: "finalizado", label: "Finalizado" },
     { id: "problema", label: "Problema" },
     { id: "cancelado", label: "Cancelado" },
   ];
@@ -242,6 +220,7 @@ export function ListaPedidos() {
             <PedidoCard
               key={pedido.id}
               pedido={pedido}
+              statusItens={statusItens}
               contagemPorRastreio={contagemPorRastreio}
               onPedidoAtualizado={(pedidoAtualizado) => {
                 setPedidos((current) => current.map((item) => (

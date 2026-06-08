@@ -63,6 +63,7 @@ export function AtualizarStatusItemDialog({ item, statusItens = [], onUpdated })
                   onChange={(event) => setStatusId(event.target.value)}
                   className="flex h-10 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
                 >
+                  {!statusAtual ? <option value={statusId}>Sem status</option> : null}
                   {statusItens.map((status) => (
                     <option key={status.id} value={status.id}>
                       {status.nome}

@@ -10,8 +10,8 @@ import { getStatusPorId } from "@/lib/constants/status";
 
 const tipos = ["Infantil", "Feminina", "Masculina"];
 
-export function ItemPedidoForm({ item, onChange, onAdicionar, showStatusBadge = true }) {
-  const statusInicial = getStatusPorId(item.status_item_id ?? 1);
+export function ItemPedidoForm({ item, statusItens = [], onChange, onAdicionar, showStatusBadge = true }) {
+  const statusInicial = getStatusPorId(item.status_item_id ?? 1, statusItens);
 
   function updateField(field, value) {
     onChange((current) => ({ ...current, [field]: value }));

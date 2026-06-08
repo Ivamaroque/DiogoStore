@@ -19,6 +19,7 @@ import { StatusBadge } from "./StatusBadge";
 import { formatCurrency } from "@/utils/currency";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { temPersonalizacao } from "@/utils/personalizacao";
+import { useStatusItens } from "@/hooks/useStatusItens";
 
 const itemPadrao = {
   quantidade: 1,
@@ -35,6 +36,7 @@ const itemPadrao = {
 export function PedidoForm() {
   const router = useRouter();
   const { user } = useAuth();
+  const { statusItens } = useStatusItens();
   const [nomeCliente, setNomeCliente] = useState("");
   const [telefone, setTelefone] = useState("");
   const [valorTotal, setValorTotal] = useState("");
@@ -138,7 +140,13 @@ export function PedidoForm() {
               </div>
             </div>
 
-            <ItemPedidoForm item={itemAtual} onChange={setItemAtual} onAdicionar={adicionarItem} showStatusBadge={false} />
+            <ItemPedidoForm
+              item={itemAtual}
+              statusItens={statusItens}
+              onChange={setItemAtual}
+              onAdicionar={adicionarItem}
+              showStatusBadge={false}
+            />
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -164,7 +172,7 @@ export function PedidoForm() {
                         </Button>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <StatusBadge status={1} />
+                        <StatusBadge status={1} statusItens={statusItens} />
                         {temPersonalizacao(item) ? <Badge variant="default">Personalização adicionada</Badge> : null}
                       </div>
                     </div>
