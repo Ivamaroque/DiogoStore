@@ -50,8 +50,7 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
     try {
       const rastreio = await obterOuCriarRastreio({ codigo_rastreio: rastreioCodigo, rastreio_em_grupo: rastreioEmGrupo });
       const itemAtualizado = await atualizarRastreioItem({ itemId, rastreio_id: rastreio?.id ?? null });
-      const itemComStatusEnviado = await atualizarStatusItem({ itemId, status_item_id: 3 });
-      const statusEnviado = getStatusPorId(3);
+      const statusEnviado = getStatusPorId(itemAtualizado.status_item_id);
 
       setPedido((current) => ({
         ...current,
@@ -59,7 +58,7 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
           item.id === itemId
             ? {
                 ...item,
-                ...itemComStatusEnviado,
+                ...itemAtualizado,
                 rastreio_id: itemAtualizado.rastreio_id,
                 rastreios: rastreio,
                 status_itens: statusEnviado,
@@ -68,7 +67,7 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
         )),
       }));
 
-      toast.success("Rastreio atualizado.");
+      toast.success("Rastreio atualizado e pedido marcado como enviado.");
       setRastreioAbertoId(null);
       setRastreioCodigo("");
       setRastreioMenuRect(null);
@@ -209,7 +208,7 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
                       <p>Tamanho: <span className="text-white">{item.tamanho || "—"}</span></p>
                     </div>
                     <div className="flex flex-wrap gap-2 lg:hidden">
-                      <StatusBadge status={item.status_itens} />
+                      <StatusBadge status={getStatusPorId(item.status_item_id) ?? item.status_itens} />
                       <RastreioBadge
                         item={item}
                         rastreio={item.rastreios}
@@ -246,9 +245,9 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
                           setEditingStatusFor(item.id);
                         }}
                         className="inline-flex items-center gap-2 rounded-full border border-zinc-800 px-3 py-1 text-sm"
-                        style={{ backgroundColor: getStatusBadgeStyle(item.status_itens?.cor).backgroundColor, borderColor: getStatusBadgeStyle(item.status_itens?.cor).borderColor, color: getStatusBadgeStyle(item.status_itens?.cor).color }}
+                        style={{ backgroundColor: getStatusBadgeStyle(getStatusPorId(item.status_item_id)?.cor ?? item.status_itens?.cor).backgroundColor, borderColor: getStatusBadgeStyle(getStatusPorId(item.status_item_id)?.cor ?? item.status_itens?.cor).borderColor, color: getStatusBadgeStyle(getStatusPorId(item.status_item_id)?.cor ?? item.status_itens?.cor).color }}
                       >
-                        <span className="text-xs">{item.status_itens?.nome || "Status"}</span>
+                        <span className="text-xs">{getStatusPorId(item.status_item_id)?.nome ?? item.status_itens?.nome ?? "Status"}</span>
                         <ChevronDown className="h-4 w-4 text-zinc-200" />
                       </button>
 

@@ -12,10 +12,9 @@ import { formatCurrency } from "@/utils/currency";
 import { formatDateTime } from "@/utils/dates";
 import { RastreioBadge } from "./RastreioBadge";
 import { StatusBadge } from "./StatusBadge";
-import { getStatusBadgeStyle } from "@/lib/constants/status";
+import { getStatusBadgeStyle, getStatusPorId, STATUS_FIXOS } from "@/lib/constants/status";
 import { atualizarStatusItem, atualizarRastreioItem } from "@/services/itensPedidoService";
 import { obterOuCriarRastreio } from "@/services/rastreiosService";
-import { STATUS_FIXOS } from "@/lib/constants/status";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { atualizarPedido } from "@/services/pedidosService";
@@ -81,6 +80,7 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
       setSaving(true);
       const rastreio = await obterOuCriarRastreio({ codigo_rastreio: rastreioValue, rastreio_em_grupo: rastreioEmGrupo });
       const itemAtualizado = await atualizarRastreioItem({ itemId: item.id, rastreio_id: rastreio?.id ?? null });
+      const statusEnviado = getStatusPorId(itemAtualizado?.status_item_id);
 
       setPedidoLocal((current) => ({
         ...current,
@@ -91,15 +91,18 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
                 ...itemAtualizado,
                 rastreio_id: itemAtualizado?.rastreio_id ?? rastreio?.id ?? null,
                 rastreios: rastreio,
+                status_itens: statusEnviado,
               }
             : currentItem,
         ),
       }));
+      setStatusMap((current) => ({ ...current, [item.id]: statusEnviado }));
 
       setEditingRastreioFor(null);
       setRastreioMenuRect(null);
       setRastreioValue("");
       router.refresh();
+      toast.success("Rastreio atualizado e pedido marcado como enviado.");
     } catch (error) {
       console.error(error);
       toast.error(error?.message || "Não foi possível atualizar o rastreio.");
@@ -232,7 +235,7 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
         <div className="space-y-3">
           {pedidoLocal.itens_pedido?.map((item) => (
             (() => {
-              const current = statusMap[item.id] ?? item.status_itens;
+              const current = statusMap[item.id] ?? getStatusPorId(item.status_item_id) ?? item.status_itens;
               const isStatusOpen = editingStatusFor === item.id;
               const isRastreioOpen = editingRastreioFor === item.id;
 

@@ -59,9 +59,17 @@ export async function atualizarStatusItem({ itemId, status_item_id, observacao_s
 }
 
 export async function atualizarRastreioItem({ itemId, rastreio_id }, supabase = getSupabaseBrowserClient()) {
+  const rastreioId = rastreio_id ?? null;
+  const payload = { rastreio_id: rastreioId };
+
+  if (rastreioId) {
+    payload.status_item_id = 3;
+    payload.ultima_atualizacao_status = new Date().toISOString();
+  }
+
   const { data, error } = await supabase
     .from("itens_pedido")
-    .update({ rastreio_id: rastreio_id ?? null })
+    .update(payload)
     .eq("id", itemId)
     .select("*")
     .single();
