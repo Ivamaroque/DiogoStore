@@ -23,6 +23,7 @@ export function gerarTextoPedidoWhatsApp(pedido) {
   const vendedor = pedido?.perfis?.nome_completo || "Não informado";
 
   const itens = pedido?.itens_pedido || [];
+  const pagamentos = Array.isArray(pedido?.pagamentos_pedido) ? pedido.pagamentos_pedido : null;
   const linhasItens = itens
     .map((item) => {
       const quantidade = item?.quantidade || 1;
@@ -81,7 +82,13 @@ TOTAL:
 ${formatCurrency(pedido?.valor_total)}
 
 TOTAL PAGO:
-${formatCurrency(pedido?.valor_pago)} (${pedido?.forma_pagamento || "Não informado"})
+${formatCurrency(pedido?.valor_pago)}
+
+${pagamentos ? `PAGAMENTOS:
+${pagamentos.length
+    ? pagamentos.map((pagamento) => `${formatCurrency(pagamento.valor)} - ${pagamento.forma_pagamento}`).join("\n")
+    : "Nenhum pagamento registrado."}
+` : ""}
 
 RESTA PAGAR:
 ${formatCurrency(pedido?.valor_restante)}

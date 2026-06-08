@@ -74,6 +74,8 @@ export function PedidoForm() {
     if (!nomeCliente.trim()) return toast.error("Informe o nome do cliente.");
     if (!itens.length) return toast.error("Adicione pelo menos um item.");
     if (valorTotalNumerico <= 0) return toast.error("O valor total precisa ser maior que zero.");
+    if (valorPagoNumerico > valorTotalNumerico) return toast.error("O valor pago não pode ser maior que o valor total.");
+    if (valorPagoNumerico > 0 && !formaPagamento) return toast.error("Informe a forma de pagamento.");
     if (!user?.id) return toast.error("Usuário logado não encontrado.");
 
     setSalvando(true);

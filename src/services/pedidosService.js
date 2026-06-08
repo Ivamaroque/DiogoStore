@@ -3,6 +3,7 @@ import { getResumoFinanceiro, getResumoPedido, getStatusPorId } from "@/lib/cons
 import { parseCurrency } from "@/utils/currency";
 import { obterOuCriarRastreio } from "./rastreiosService";
 import { getPersonalizacaoDoItem } from "@/utils/personalizacao";
+import { criarPagamentoPedido } from "./pagamentosService";
 
 const pedidosInFlight = new Map();
 
@@ -150,7 +151,6 @@ export async function buscarPedidoPorId(id, supabase = getSupabaseBrowserClient(
 export async function criarPedidoCompleto({ pedido, itens, criadoPor }, supabase = getSupabaseBrowserClient()) {
   const valorTotal = parseCurrency(pedido.valor_total);
   const valorPago = parseCurrency(pedido.valor_pago);
-  const valorRestante = Math.max(valorTotal - valorPago, 0);
 
   const { data: pedidoCriado, error: pedidoError } = await supabase
     .from("pedidos")
@@ -158,8 +158,8 @@ export async function criarPedidoCompleto({ pedido, itens, criadoPor }, supabase
       nome_cliente: pedido.nome_cliente,
       telefone: pedido.telefone || null,
       valor_total: valorTotal,
-      valor_pago: valorPago,
-      valor_restante: valorRestante,
+      valor_pago: 0,
+      valor_restante: valorTotal,
       forma_pagamento: pedido.forma_pagamento || null,
       criado_por: criadoPor,
     })
@@ -221,7 +221,21 @@ export async function criarPedidoCompleto({ pedido, itens, criadoPor }, supabase
     if (personalizacoesError) throw personalizacoesError;
   }
 
-  return { pedido: pedidoCriado, itens: itensCriados ?? [] };
+  if (valorPago > 0) {
+    await criarPagamentoPedido(
+      {
+        pedido_id: pedidoCriado.id,
+        valor: valorPago,
+        forma_pagamento: pedido.forma_pagamento,
+        observacao: "Pagamento inicial",
+        criado_por: criadoPor,
+      },
+      supabase,
+    );
+  }
+
+  const pedidoAtualizado = await buscarPedidoPorId(pedidoCriado.id, supabase);
+  return { pedido: pedidoAtualizado, itens: itensCriados ?? [] };
 }
 
 export async function atualizarPedido(id, payload, supabase = getSupabaseBrowserClient()) {

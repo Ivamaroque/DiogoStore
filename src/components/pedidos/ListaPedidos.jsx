@@ -239,7 +239,16 @@ export function ListaPedidos() {
       ) : pedidosFiltrados.length ? (
         <div className="space-y-4">
           {pedidosFiltrados.map((pedido) => (
-            <PedidoCard key={pedido.id} pedido={pedido} contagemPorRastreio={contagemPorRastreio} />
+            <PedidoCard
+              key={pedido.id}
+              pedido={pedido}
+              contagemPorRastreio={contagemPorRastreio}
+              onPedidoAtualizado={(pedidoAtualizado) => {
+                setPedidos((current) => current.map((item) => (
+                  item.id === pedidoAtualizado.id ? pedidoAtualizado : item
+                )));
+              }}
+            />
           ))}
 
           <div ref={loadMoreRef} className="h-10" />

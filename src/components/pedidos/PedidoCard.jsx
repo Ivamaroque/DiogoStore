@@ -17,10 +17,11 @@ import { atualizarStatusItem, atualizarRastreioItem } from "@/services/itensPedi
 import { obterOuCriarRastreio } from "@/services/rastreiosService";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
-import { atualizarPedido } from "@/services/pedidosService";
+import { buscarPedidoPorId } from "@/services/pedidosService";
 import { formatarPersonalizacaoItem } from "@/utils/personalizacao";
+import { RegistrarPagamentoDialog } from "./RegistrarPagamentoDialog";
 
-export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
+export function PedidoCard({ pedido, contagemPorRastreio = {}, onPedidoAtualizado }) {
   const router = useRouter();
   const [pedidoLocal, setPedidoLocal] = useState(pedido);
   const [editingStatusFor, setEditingStatusFor] = useState(null);
@@ -32,6 +33,7 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
   const [rastreioEmGrupo, setRastreioEmGrupo] = useState(false);
   const [rastreioMenuRect, setRastreioMenuRect] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [pagamentoDialogOpen, setPagamentoDialogOpen] = useState(false);
 
   useEffect(() => {
     setPedidoLocal(pedido);
@@ -111,31 +113,13 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
     }
   }
 
-  async function handlePagarRestante() {
+  async function handlePagamentoRegistrado() {
     if (!pedidoLocal || Number(pedidoLocal.valor_restante) <= 0) return;
 
-    try {
-      setSaving(true);
-      const atualizado = await atualizarPedido(pedidoLocal.id, {
-        valor_pago: Number(pedidoLocal.valor_total || 0),
-        valor_restante: 0,
-      });
-
-      setPedidoLocal((current) => ({
-        ...current,
-        ...atualizado,
-        valor_pago: Number(atualizado?.valor_pago ?? current.valor_total ?? 0),
-        valor_restante: 0,
-      }));
-
-      router.refresh();
-      toast.success("Restante quitado com sucesso.");
-    } catch (error) {
-      console.error(error);
-      toast.error(error?.message || "Não foi possível quitar o restante.");
-    } finally {
-      setSaving(false);
-    }
+    const atualizado = await buscarPedidoPorId(pedidoLocal.id);
+    setPedidoLocal(atualizado);
+    onPedidoAtualizado?.(atualizado);
+    router.refresh();
   }
 
   useEffect(() => {
@@ -475,7 +459,7 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
         <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-400">
           <span className="flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-zinc-300">
             <Clock3 className="h-4 w-4 text-zinc-500" />
-            {pedidoLocal.forma_pagamento || "Não informado"}
+            {Number(pedidoLocal.valor_pago) > 0 ? "Pagamento registrado" : "Sem pagamento"}
           </span>
           <span className="flex items-center gap-2 text-zinc-500">
             <User className="h-4 w-4" /> {pedidoLocal.perfis?.nome_completo || "—"}
@@ -488,11 +472,11 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
               type="button"
               size="sm"
               variant="outline"
-              onClick={handlePagarRestante}
+              onClick={() => setPagamentoDialogOpen(true)}
               disabled={saving}
               className="w-full gap-2 rounded-xl border-[#27a074]/40 bg-[#27a074] px-4 text-white shadow-glow hover:bg-[#27a074]/90 hover:text-white sm:w-auto"
             >
-              Pagar restante
+              Registrar pagamento
             </Button>
           ) : null}
 
@@ -504,6 +488,13 @@ export function PedidoCard({ pedido, contagemPorRastreio = {} }) {
           </Button>
         </div>
       </CardFooter>
+
+      <RegistrarPagamentoDialog
+        pedido={pedidoLocal}
+        open={pagamentoDialogOpen}
+        onOpenChange={setPagamentoDialogOpen}
+        onPagamentoRegistrado={handlePagamentoRegistrado}
+      />
     </Card>
   );
 }

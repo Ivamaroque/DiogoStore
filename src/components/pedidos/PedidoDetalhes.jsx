@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { CalendarDays, CreditCard, Package, Phone, Save, Truck, User, ChevronDown, Copy } from "lucide-react";
 import { toast } from "sonner";
@@ -25,6 +25,8 @@ import { formatCurrency } from "@/utils/currency";
 import { formatDateTime } from "@/utils/dates";
 import { gerarTextoPedidoWhatsApp } from "@/utils/gerarTextoPedido";
 import { formatarPersonalizacaoItem } from "@/utils/personalizacao";
+import { listarPagamentosPedido } from "@/services/pagamentosService";
+import { RegistrarPagamentoDialog } from "./RegistrarPagamentoDialog";
 
 export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio = {} }) {
   const [pedido, setPedido] = useState(pedidoInicial);
@@ -35,6 +37,11 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
   const [rastreioMenuRect, setRastreioMenuRect] = useState(null);
   const [salvandoRastreio, setSalvandoRastreio] = useState(false);
   const [statusMap, setStatusMap] = useState({});
+  const [pagamentos, setPagamentos] = useState([]);
+  const [carregandoPagamentos, setCarregandoPagamentos] = useState(true);
+  const [erroPagamentos, setErroPagamentos] = useState("");
+  const [pagamentoDialogOpen, setPagamentoDialogOpen] = useState(false);
+  const pagamentosRequestRef = useRef(0);
 
   const financeiros = useMemo(
     () => ({
@@ -121,7 +128,7 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
 
   async function copiarTextoPedido() {
     try {
-      const texto = gerarTextoPedidoWhatsApp(pedido);
+      const texto = gerarTextoPedidoWhatsApp({ ...pedido, pagamentos_pedido: pagamentos });
       await navigator.clipboard.writeText(texto);
       toast.success("Texto da encomenda copiado!");
     } catch (error) {
@@ -139,6 +146,38 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
     } catch (e) {
       console.error("Erro ao recarregar pedido:", e);
     }
+  }
+
+  const carregarPagamentos = useCallback(async () => {
+    if (!pedido?.id) return;
+    const requestId = ++pagamentosRequestRef.current;
+
+    try {
+      setCarregandoPagamentos(true);
+      setErroPagamentos("");
+      const dados = await listarPagamentosPedido(pedido.id);
+      if (requestId !== pagamentosRequestRef.current) return;
+      setPagamentos(dados);
+    } catch (error) {
+      if (requestId !== pagamentosRequestRef.current) return;
+      console.error("Erro ao carregar pagamentos:", error);
+      setErroPagamentos(error?.message || "Não foi possível carregar os pagamentos.");
+    } finally {
+      if (requestId !== pagamentosRequestRef.current) return;
+      setCarregandoPagamentos(false);
+    }
+  }, [pedido?.id]);
+
+  useEffect(() => {
+    void carregarPagamentos();
+
+    return () => {
+      pagamentosRequestRef.current += 1;
+    };
+  }, [carregarPagamentos]);
+
+  async function handlePagamentoRegistrado() {
+    await Promise.all([reloadPedido(), carregarPagamentos()]);
   }
 
   return (
@@ -179,12 +218,67 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
           <CardContent className="space-y-4">
             <FinanceiroResumo {...financeiros} />
             <div className="grid gap-3 text-sm text-zinc-400 sm:grid-cols-2">
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4"><p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Forma de pagamento</p><p className="mt-1 text-white">{pedido.forma_pagamento || "—"}</p></div>
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4"><p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Pagamentos</p><p className="mt-1 text-white">{Number(pedido.valor_pago) > 0 ? "Histórico disponível abaixo" : "Nenhum pagamento"}</p></div>
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4"><p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Total de itens</p><p className="mt-1 text-white">{pedido.itens_pedido?.length || 0}</p></div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-zinc-800 bg-zinc-900/95">
+        <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-white">
+              <CreditCard className="h-5 w-5 text-brand" />
+              Pagamentos
+            </CardTitle>
+            <p className="mt-1 text-sm text-zinc-400">Histórico dos valores recebidos neste pedido.</p>
+          </div>
+
+          {Number(pedido.valor_restante) > 0 ? (
+            <Button
+              type="button"
+              onClick={() => setPagamentoDialogOpen(true)}
+              className="bg-[#27a074] text-white hover:bg-[#27a074]/90"
+            >
+              Registrar pagamento
+            </Button>
+          ) : (
+            <Badge variant="success">Pedido quitado</Badge>
+          )}
+        </CardHeader>
+        <CardContent>
+          {carregandoPagamentos ? (
+            <p className="text-sm text-zinc-500">Carregando pagamentos...</p>
+          ) : erroPagamentos ? (
+            <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+              {erroPagamentos}
+            </div>
+          ) : pagamentos.length ? (
+            <div className="divide-y divide-zinc-800 rounded-2xl border border-zinc-800 bg-zinc-950">
+              {pagamentos.map((pagamento) => (
+                <div key={pagamento.id} className="grid gap-2 px-4 py-4 text-sm sm:grid-cols-[1fr_auto] sm:items-center">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="font-semibold text-white">{formatCurrency(pagamento.valor)}</span>
+                      <span className="text-zinc-300">{pagamento.forma_pagamento}</span>
+                      <span className="text-zinc-500">{pagamento.perfis?.nome_completo || "Usuário não identificado"}</span>
+                    </div>
+                    {pagamento.observacao ? (
+                      <p className="mt-1 text-zinc-500">{pagamento.observacao}</p>
+                    ) : null}
+                  </div>
+                  <span className="text-zinc-500">{formatDateTime(pagamento.criado_em)}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-950 px-4 py-8 text-center text-sm text-zinc-500">
+              Nenhum pagamento registrado.
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="border-zinc-800 bg-zinc-900/95">
         <CardHeader>
@@ -370,9 +464,16 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
       </div>
 
       <div className="flex flex-col gap-3 rounded-3xl border border-zinc-800 bg-zinc-950 p-4 sm:flex-row sm:items-center sm:justify-end sm:p-5">
-        <EditarPedidoDialog pedido={pedido} onUpdated={(p) => setPedido(p)} />
+        <EditarPedidoDialog pedido={pedido} onUpdated={() => void reloadPedido()} />
         <ConfirmarExcluirPedidoDialog pedidoId={pedido.id} />
       </div>
+
+      <RegistrarPagamentoDialog
+        pedido={pedido}
+        open={pagamentoDialogOpen}
+        onOpenChange={setPagamentoDialogOpen}
+        onPagamentoRegistrado={handlePagamentoRegistrado}
+      />
     </div>
   );
 }
