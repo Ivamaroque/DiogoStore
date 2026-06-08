@@ -54,8 +54,17 @@ const PEDIDO_SELECT = `
   )
 `;
 
-function buildPedidoQuery(supabase) {
-  return supabase.from("pedidos").select(PEDIDO_SELECT, { count: "exact" }).order("criado_em", { ascending: false });
+function buildPedidoQuery(supabase, pedidoIds = null) {
+  let query = supabase
+    .from("pedidos")
+    .select(PEDIDO_SELECT, { count: "exact" })
+    .order("criado_em", { ascending: false });
+
+  if (pedidoIds) {
+    query = query.in("id", pedidoIds);
+  }
+
+  return query;
 }
 
 function normalizePedido(pedido) {
@@ -83,14 +92,66 @@ function matchText(source, term) {
   return String(source ?? "").toLowerCase().includes(term);
 }
 
-export async function listarPedidosPorPagina({ page = 1, pageSize = 10 } = {}, supabase = getSupabaseBrowserClient()) {
-  const key = `listarPedidosPorPagina:${page}:${pageSize}`;
+function normalizarTermoBusca(termo) {
+  return termo.trim().replace(/[,%()]/g, " ").replace(/\s+/g, " ");
+}
+
+async function buscarIdsPedidosPorTermo(termo, supabase) {
+  const termoLimpo = normalizarTermoBusca(termo);
+  if (!termoLimpo) return null;
+
+  const filtrosDiretos = [
+    `nome_cliente.ilike.%${termoLimpo}%`,
+    `telefone.ilike.%${termoLimpo}%`,
+  ];
+
+  const [pedidosResult, itensResult, rastreiosResult] = await Promise.all([
+    supabase.from("pedidos").select("id").or(filtrosDiretos.join(",")),
+    supabase.from("itens_pedido").select("pedido_id").ilike("nome_produto", `%${termoLimpo}%`),
+    supabase.from("rastreios").select("id").ilike("codigo_rastreio", `%${termoLimpo}%`),
+  ]);
+
+  if (pedidosResult.error) throw pedidosResult.error;
+  if (itensResult.error) throw itensResult.error;
+  if (rastreiosResult.error) throw rastreiosResult.error;
+
+  const pedidoIds = new Set([
+    ...(pedidosResult.data ?? []).map((pedido) => pedido.id),
+    ...(itensResult.data ?? []).map((item) => item.pedido_id),
+  ]);
+
+  const rastreioIds = (rastreiosResult.data ?? []).map((rastreio) => rastreio.id);
+  if (rastreioIds.length > 0) {
+    const { data: itensComRastreio, error } = await supabase
+      .from("itens_pedido")
+      .select("pedido_id")
+      .in("rastreio_id", rastreioIds);
+
+    if (error) throw error;
+    (itensComRastreio ?? []).forEach((item) => pedidoIds.add(item.pedido_id));
+  }
+
+  return [...pedidoIds];
+}
+
+export async function listarPedidosPorPagina({ page = 1, pageSize = 10, termo = "" } = {}, supabase = getSupabaseBrowserClient()) {
+  const termoLimpo = termo.trim();
+  const key = `listarPedidosPorPagina:${page}:${pageSize}:${termoLimpo.toLowerCase()}`;
 
   return dedupeInFlight(key, async () => {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
+    const pedidoIds = await buscarIdsPedidosPorTermo(termoLimpo, supabase);
 
-    const { data, error, count } = await buildPedidoQuery(supabase).range(from, to);
+    if (pedidoIds?.length === 0) {
+      return {
+        pedidos: [],
+        total: 0,
+        hasMore: false,
+      };
+    }
+
+    const { data, error, count } = await buildPedidoQuery(supabase, pedidoIds).range(from, to);
 
     if (error) throw error;
 

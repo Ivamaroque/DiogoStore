@@ -19,6 +19,7 @@ export function ListaPedidos() {
   const { statusItens } = useStatusItens();
   const [pedidos, setPedidos] = useState([]);
   const [termo, setTermo] = useState("");
+  const [termoBusca, setTermoBusca] = useState("");
   const [abaAtiva, setAbaAtiva] = useState("aberto");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -28,18 +29,27 @@ export function ListaPedidos() {
   const loadMoreRef = useRef(null);
   const loadingRef = useRef(false);
   const pageRef = useRef(1);
+  const requestIdRef = useRef(0);
 
   const carregarPedidos = useCallback(async ({ reset = false } = {}) => {
-    if (loadingRef.current) return;
+    if (loadingRef.current && !reset) return;
 
+    const requestId = reset ? ++requestIdRef.current : requestIdRef.current;
     loadingRef.current = true;
 
     try {
       setLoading(true);
       setError("");
+      if (reset) setInitialLoading(true);
 
       const paginaAtual = reset ? 1 : pageRef.current;
-      const result = await listarPedidosPorPagina({ page: paginaAtual, pageSize: PAGE_SIZE });
+      const result = await listarPedidosPorPagina({
+        page: paginaAtual,
+        pageSize: PAGE_SIZE,
+        termo: termoBusca,
+      });
+
+      if (requestId !== requestIdRef.current) return;
 
       setPedidos((prev) => {
         if (reset) return result.pedidos;
@@ -54,14 +64,24 @@ export function ListaPedidos() {
       pageRef.current = paginaAtual + 1;
       setPage(pageRef.current);
     } catch (error) {
+      if (requestId !== requestIdRef.current) return;
       console.error(error);
       setError("Não foi possível carregar os pedidos. Tente novamente.");
     } finally {
+      if (requestId !== requestIdRef.current) return;
       loadingRef.current = false;
       setLoading(false);
       setInitialLoading(false);
     }
-  }, []);
+  }, [termoBusca]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setTermoBusca(termo.trim());
+    }, 350);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [termo]);
 
   useEffect(() => {
     pageRef.current = 1;
@@ -77,29 +97,16 @@ export function ListaPedidos() {
   }, [contagemPorRastreio]);
 
   const pedidosFiltrados = useMemo(() => {
-    const termoLimpo = termo.trim().toLowerCase();
-
     return pedidos.filter((pedido) => {
       const itens = pedido.itens_pedido ?? [];
-      const correspondeTermo =
-        !termoLimpo ||
-        String(pedido.id ?? "").toLowerCase().includes(termoLimpo) ||
-        String(pedido.nome_cliente ?? "").toLowerCase().includes(termoLimpo) ||
-        String(pedido.telefone ?? "").toLowerCase().includes(termoLimpo) ||
-        itens.some(
-          (item) =>
-            String(item.nome_produto ?? "").toLowerCase().includes(termoLimpo) ||
-            String(item.rastreios?.codigo_rastreio ?? "").toLowerCase().includes(termoLimpo),
-        );
-
       const statusResumo = getStatusResumoPedido(itens, statusItens);
       const correspondeStatus =
         abaAtiva === "todos" ||
         statusResumo?.chave === abaAtiva;
 
-      return correspondeTermo && correspondeStatus;
+      return correspondeStatus;
     });
-  }, [abaAtiva, pedidos, statusItens, termo]);
+  }, [abaAtiva, pedidos, statusItens]);
 
   const filtrosRapidos = [
     { id: "todos", label: "Todos" },
@@ -167,7 +174,7 @@ export function ListaPedidos() {
               value={termo}
               onChange={(event) => setTermo(event.target.value)}
               className="h-12 rounded-2xl border-zinc-800 bg-zinc-950 text-white placeholder:text-zinc-500"
-              placeholder="Buscar por cliente, pedido ou rastreio..."
+              placeholder="Buscar por cliente, telefone, produto ou rastreio..."
             />
           </div>
 
@@ -214,21 +221,27 @@ export function ListaPedidos() {
             </div>
           </CardContent>
         </Card>
-      ) : pedidosFiltrados.length ? (
+      ) : pedidos.length ? (
         <div className="space-y-4">
-          {pedidosFiltrados.map((pedido) => (
-            <PedidoCard
-              key={pedido.id}
-              pedido={pedido}
-              statusItens={statusItens}
-              contagemPorRastreio={contagemPorRastreio}
-              onPedidoAtualizado={(pedidoAtualizado) => {
-                setPedidos((current) => current.map((item) => (
-                  item.id === pedidoAtualizado.id ? pedidoAtualizado : item
-                )));
-              }}
-            />
-          ))}
+          {pedidosFiltrados.length ? (
+            pedidosFiltrados.map((pedido) => (
+              <PedidoCard
+                key={pedido.id}
+                pedido={pedido}
+                statusItens={statusItens}
+                contagemPorRastreio={contagemPorRastreio}
+                onPedidoAtualizado={(pedidoAtualizado) => {
+                  setPedidos((current) => current.map((item) => (
+                    item.id === pedidoAtualizado.id ? pedidoAtualizado : item
+                  )));
+                }}
+              />
+            ))
+          ) : (
+            <p className="rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-6 text-center text-sm text-zinc-500">
+              Nenhum pedido encontrado neste filtro.
+            </p>
+          )}
 
           <div ref={loadMoreRef} className="h-10" />
 
