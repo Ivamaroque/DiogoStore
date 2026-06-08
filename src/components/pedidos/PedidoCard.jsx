@@ -7,12 +7,11 @@ import { ArrowUpRight, CalendarDays, Clock3, ChevronDown, Package, Phone, User, 
 import { toast } from "sonner";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/utils/currency";
 import { formatDateTime } from "@/utils/dates";
 import { RastreioBadge } from "./RastreioBadge";
 import { StatusBadge } from "./StatusBadge";
-import { getStatusBadgeStyle, getStatusPorId, STATUS_FIXOS } from "@/lib/constants/status";
+import { getStatusBadgeStyle, getStatusPorId, getStatusResumoPedido, STATUS_FIXOS } from "@/lib/constants/status";
 import { atualizarStatusItem, atualizarRastreioItem } from "@/services/itensPedidoService";
 import { obterOuCriarRastreio } from "@/services/rastreiosService";
 import { Input } from "@/components/ui/input";
@@ -40,12 +39,11 @@ export function PedidoCard({ pedido, contagemPorRastreio = {}, onPedidoAtualizad
   }, [pedido]);
 
   const itensPedido = pedidoLocal.itens_pedido ?? [];
-  const todosItensEntregues = itensPedido.length > 0 && itensPedido.every((item) => Number(item.status_item_id) === 5);
-  const statusResumoPedido = todosItensEntregues
-    ? { label: "Finalizado", variant: "success" }
-    : pedidoLocal.valor_restante > 0
-      ? { label: "Em aberto", variant: "danger" }
-      : { label: "Pago", variant: "success" };
+  const itensComStatusAtual = itensPedido.map((item) => ({
+    ...item,
+    status_item_id: statusMap[item.id]?.id ?? item.status_item_id,
+  }));
+  const statusResumoPedido = getStatusResumoPedido(itensComStatusAtual);
 
   function getMenuPlacement(rect, width, height) {
     const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 0;
@@ -178,9 +176,7 @@ export function PedidoCard({ pedido, contagemPorRastreio = {}, onPedidoAtualizad
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <CardTitle className="truncate text-xl text-white">{pedido.nome_cliente}</CardTitle>
-                <Badge variant={statusResumoPedido.variant}>
-                  {statusResumoPedido.label}
-                </Badge>
+                <StatusBadge status={statusResumoPedido} />
               </div>
 
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-400">

@@ -14,15 +14,37 @@ export function getStatusPorId(statusId) {
   return STATUS_MAP[Number(statusId)] ?? null;
 }
 
-export function getResumoPedido(itens = []) {
-  if (!itens.length) return "Pedido realizado";
+export function getStatusResumoPedido(itens = []) {
+  if (!itens.length) return getStatusPorId(1);
 
-  const statusIds = itens.map((item) => Number(item.status_item_id ?? item.status_itens?.id)).filter(Boolean);
-  if (statusIds.length && statusIds.every((id) => id === 5)) return "Pedido entregue";
-  if (statusIds.includes(7)) return "Pedido com problema";
-  if (statusIds.includes(4)) return "Itens prontos para retirada";
-  if (statusIds.includes(3)) return "Pedido em andamento";
-  return "Pedido realizado";
+  const statusIds = itens
+    .map((item) => Number(item.status_item_id ?? item.status_itens?.id))
+    .filter(Boolean);
+
+  if (!statusIds.length) return getStatusPorId(1);
+
+  const primeiroStatusId = statusIds[0];
+  if (statusIds.every((id) => id === primeiroStatusId)) {
+    return getStatusPorId(primeiroStatusId);
+  }
+
+  if (statusIds.includes(7)) {
+    return {
+      nome: "Pedido com problema",
+      descricao: "Existe pelo menos um item com problema.",
+      cor: "#f43f5e",
+    };
+  }
+
+  return {
+    nome: "Pedido em andamento",
+    descricao: "Os itens do pedido estão em etapas diferentes.",
+    cor: "#f97316",
+  };
+}
+
+export function getResumoPedido(itens = []) {
+  return getStatusResumoPedido(itens)?.nome ?? "Pedido realizado";
 }
 
 export function getStatusBadgeStyle(cor) {

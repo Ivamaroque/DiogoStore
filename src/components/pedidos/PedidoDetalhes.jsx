@@ -20,7 +20,7 @@ import { StatusBadge } from "./StatusBadge";
 import { RastreioBadge } from "./RastreioBadge";
 import { atualizarRastreioItem, atualizarStatusItem } from "@/services/itensPedidoService";
 import { obterOuCriarRastreio } from "@/services/rastreiosService";
-import { STATUS_FIXOS, getStatusBadgeStyle, getStatusPorId } from "@/lib/constants/status";
+import { STATUS_FIXOS, getStatusBadgeStyle, getStatusPorId, getStatusResumoPedido } from "@/lib/constants/status";
 import { formatCurrency } from "@/utils/currency";
 import { formatDateTime } from "@/utils/dates";
 import { gerarTextoPedidoWhatsApp } from "@/utils/gerarTextoPedido";
@@ -51,6 +51,7 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
     }),
     [pedido],
   );
+  const statusResumoPedido = getStatusResumoPedido(pedido?.itens_pedido);
 
   async function salvarRastreio(itemId) {
     setSalvandoRastreio(true);
@@ -458,7 +459,7 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="border-zinc-800 bg-zinc-900/95"><CardContent className="p-5"><p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Status resumido</p><p className="mt-2 text-lg font-semibold text-brand">{pedido.resumo_status}</p></CardContent></Card>
+        <Card className="border-zinc-800 bg-zinc-900/95"><CardContent className="p-5"><p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Status resumido</p><StatusBadge status={statusResumoPedido} className="mt-2" /></CardContent></Card>
         <Card className="border-zinc-800 bg-zinc-900/95"><CardContent className="p-5"><p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Itens com problema</p><p className="mt-2 text-lg font-semibold text-red-400">{pedido.itens_pedido?.filter((item) => Number(item.status_item_id) === 7).length || 0}</p></CardContent></Card>
         <Card className="border-zinc-800 bg-zinc-900/95"><CardContent className="p-5"><p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Itens entregues</p><p className="mt-2 text-lg font-semibold text-emerald-400">{pedido.itens_pedido?.filter((item) => Number(item.status_item_id) === 5).length || 0}</p></CardContent></Card>
       </div>
