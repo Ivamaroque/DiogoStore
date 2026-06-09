@@ -15,7 +15,12 @@ import { useStatusItens } from "@/hooks/useStatusItens";
 
 const PAGE_SIZE = 10;
 
-export function ListaPedidos() {
+export function ListaPedidos({
+  modoLista = "geral",
+  atualizacoesCount = 0,
+  onModoListaChange,
+  atualizacoesContent = null,
+}) {
   const { statusItens } = useStatusItens();
   const [pedidos, setPedidos] = useState([]);
   const [termo, setTermo] = useState("");
@@ -200,7 +205,30 @@ export function ListaPedidos() {
         </CardContent>
       </Card>
 
-      {initialLoading ? (
+      <div className="flex w-full rounded-2xl border border-zinc-800 gap-2 bg-zinc-900/70 p-1 sm:w-fit">
+        <Button
+          type="button"
+          onClick={() => onModoListaChange?.("atualizados")}
+          className={modoLista === "atualizados"
+            ? "h-10 flex-1 bg-brand px-5 text-white hover:bg-brand/90 sm:flex-none"
+            : "h-10 flex-1 border border-transparent bg-transparent px-5 text-zinc-400 hover:border-zinc-800 hover:bg-zinc-900 hover:text-white sm:flex-none"}
+        >
+          Atualizados ({atualizacoesCount})
+        </Button>
+        <Button
+          type="button"
+          onClick={() => onModoListaChange?.("geral")}
+          className={modoLista === "geral"
+            ? "h-10 flex-1 bg-brand px-5 text-white hover:bg-brand/90 sm:flex-none"
+            : "h-10 flex-1 border border-transparent bg-transparent px-5 text-zinc-400 hover:border-zinc-800 hover:bg-zinc-900 hover:text-white sm:flex-none"}
+        >
+          Geral
+        </Button>
+      </div>
+
+      {modoLista === "atualizados" ? (
+        atualizacoesContent
+      ) : initialLoading ? (
         <div className="space-y-4">
           <p className="text-sm text-zinc-400">Carregando pedidos...</p>
           {[...Array(2)].map((_, index) => (

@@ -20,7 +20,13 @@ import { buscarPedidoPorId } from "@/services/pedidosService";
 import { formatarPersonalizacaoItem } from "@/utils/personalizacao";
 import { RegistrarPagamentoDialog } from "./RegistrarPagamentoDialog";
 
-export function PedidoCard({ pedido, statusItens = [], contagemPorRastreio = {}, onPedidoAtualizado }) {
+export function PedidoCard({
+  pedido,
+  statusItens = [],
+  contagemPorRastreio = {},
+  onPedidoAtualizado,
+  renderActions,
+}) {
   const router = useRouter();
   const [pedidoLocal, setPedidoLocal] = useState(pedido);
   const [editingStatusFor, setEditingStatusFor] = useState(null);
@@ -464,6 +470,8 @@ export function PedidoCard({ pedido, statusItens = [], contagemPorRastreio = {},
         </div>
 
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+          {renderActions?.(pedidoLocal)}
+
           {Number(pedidoLocal.valor_restante) > 0 ? (
             <Button
               type="button"
