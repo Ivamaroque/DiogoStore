@@ -11,14 +11,20 @@ import { contarItensPorRastreio } from "@/utils/rastreios";
 import { sincronizarRastreiosEmGrupo } from "@/services/rastreiosService";
 import { listarPedidosPorPagina } from "@/services/pedidosService";
 import { getStatusResumoPedido } from "@/lib/constants/status";
+import { getAtualizacoesAvisoDoPedido } from "@/utils/atualizacoesPedido";
 import { useStatusItens } from "@/hooks/useStatusItens";
+import { NotificarClienteButton } from "./NotificarClienteButton";
 
 const PAGE_SIZE = 10;
 
 export function ListaPedidos({
   modoLista = "geral",
+  atualizacoes = [],
+  pedidosSincronizados = {},
   atualizacoesCount = 0,
   onModoListaChange,
+  onPedidoAtualizado,
+  onAtualizacoesResolvidas,
   atualizacoesContent = null,
 }) {
   const { statusItens } = useStatusItens();
@@ -94,6 +100,15 @@ export function ListaPedidos({
     setHasMore(true);
     void carregarPedidos({ reset: true });
   }, [carregarPedidos]);
+
+  useEffect(() => {
+    const idsSincronizados = Object.keys(pedidosSincronizados);
+    if (!idsSincronizados.length) return;
+
+    setPedidos((current) => current.map((pedido) => (
+      pedidosSincronizados[pedido.id] ?? pedido
+    )));
+  }, [pedidosSincronizados]);
 
   const contagemPorRastreio = useMemo(() => contarItensPorRastreio(pedidos), [pedidos]);
 
@@ -258,10 +273,24 @@ export function ListaPedidos({
                 pedido={pedido}
                 statusItens={statusItens}
                 contagemPorRastreio={contagemPorRastreio}
+                renderActions={(() => {
+                  const atualizacoesAviso = getAtualizacoesAvisoDoPedido(atualizacoes, pedido.id);
+
+                  if (!atualizacoesAviso.length) return undefined;
+
+                  return (pedidoAtual) => (
+                    <NotificarClienteButton
+                      pedido={pedidoAtual}
+                      atualizacoes={atualizacoesAviso}
+                      onAtualizacoesResolvidas={onAtualizacoesResolvidas}
+                    />
+                  );
+                })()}
                 onPedidoAtualizado={(pedidoAtualizado) => {
                   setPedidos((current) => current.map((item) => (
                     item.id === pedidoAtualizado.id ? pedidoAtualizado : item
                   )));
+                  onPedidoAtualizado?.(pedidoAtualizado);
                 }}
               />
             ))

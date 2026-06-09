@@ -88,10 +88,9 @@ export function PedidoCard({
       const rastreio = await obterOuCriarRastreio({ codigo_rastreio: rastreioValue, rastreio_em_grupo: rastreioEmGrupo });
       const itemAtualizado = await atualizarRastreioItem({ itemId: item.id, rastreio_id: rastreio?.id ?? null });
       const statusEnviado = getStatusPorId(itemAtualizado?.status_item_id, statusItens);
-
-      setPedidoLocal((current) => ({
-        ...current,
-        itens_pedido: (current.itens_pedido ?? []).map((currentItem) =>
+      const pedidoAtualizado = {
+        ...pedidoLocal,
+        itens_pedido: (pedidoLocal.itens_pedido ?? []).map((currentItem) =>
           currentItem.id === item.id
             ? {
                 ...currentItem,
@@ -102,7 +101,10 @@ export function PedidoCard({
               }
             : currentItem,
         ),
-      }));
+      };
+
+      setPedidoLocal(pedidoAtualizado);
+      onPedidoAtualizado?.(pedidoAtualizado);
       setStatusMap((current) => ({ ...current, [item.id]: statusEnviado }));
 
       setEditingRastreioFor(null);

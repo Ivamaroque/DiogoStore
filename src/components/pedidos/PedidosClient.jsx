@@ -1,10 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useStatusItens } from "@/hooks/useStatusItens";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { listarAtualizacoesPendentes } from "@/services/atualizacoesPedidoService";
+import {
+  filtrarAtualizacoesVisiveis,
+  getPedidosUnicosDasAtualizacoes,
+} from "@/utils/atualizacoesPedido";
 import { AtualizacoesPedidos } from "./AtualizacoesPedidos";
 import { ListaPedidos } from "./ListaPedidos";
 
@@ -12,8 +16,36 @@ export function PedidosClient() {
   const { statusItens, carregando, erro } = useStatusItens();
   const [modoLista, setModoLista] = useState(null);
   const [atualizacoes, setAtualizacoes] = useState([]);
+  const [pedidosSincronizados, setPedidosSincronizados] = useState({});
   const [loadingAtualizacoes, setLoadingAtualizacoes] = useState(true);
   const [erroAtualizacoes, setErroAtualizacoes] = useState("");
+  const atualizacoesVisiveis = useMemo(
+    () => filtrarAtualizacoesVisiveis(atualizacoes),
+    [atualizacoes],
+  );
+  const totalPedidosAtualizados = useMemo(
+    () => getPedidosUnicosDasAtualizacoes(atualizacoesVisiveis).length,
+    [atualizacoesVisiveis],
+  );
+  const sincronizarPedidoNasAtualizacoes = useCallback((pedidoAtualizado) => {
+    setPedidosSincronizados((current) => ({
+      ...current,
+      [pedidoAtualizado.id]: pedidoAtualizado,
+    }));
+
+    setAtualizacoes((current) => current.map((atualizacao) => {
+      if (String(atualizacao.pedido_id) !== String(pedidoAtualizado.id)) {
+        return atualizacao;
+      }
+
+      return {
+        ...atualizacao,
+        pedidos: Array.isArray(atualizacao.pedidos)
+          ? [pedidoAtualizado]
+          : pedidoAtualizado,
+      };
+    }));
+  }, []);
 
   const carregarAtualizacoes = useCallback(async () => {
     try {
@@ -21,8 +53,10 @@ export function PedidosClient() {
       setErroAtualizacoes("");
       const data = await listarAtualizacoesPendentes();
 
+      const atualizacoesIniciais = filtrarAtualizacoesVisiveis(data);
+
       setAtualizacoes(data);
-      setModoLista((modoAtual) => modoAtual ?? (data.length > 0 ? "atualizados" : "geral"));
+      setModoLista((modoAtual) => modoAtual ?? (atualizacoesIniciais.length > 0 ? "atualizados" : "geral"));
     } catch (error) {
       console.error(error);
       setErroAtualizacoes(error?.message || "Não foi possível carregar as atualizações.");
@@ -56,17 +90,26 @@ export function PedidosClient() {
             statusItens={statusItens}
             carregandoStatus={carregando}
             modoLista={modoLista}
-            atualizacoesCount={atualizacoes.length}
+            atualizacoes={atualizacoesVisiveis}
+            pedidosSincronizados={pedidosSincronizados}
+            atualizacoesCount={totalPedidosAtualizados}
             onModoListaChange={setModoLista}
+            onPedidoAtualizado={sincronizarPedidoNasAtualizacoes}
+            onAtualizacoesResolvidas={(atualizacaoIds) => {
+              const idsResolvidos = new Set(atualizacaoIds.map(String));
+              setAtualizacoes((current) => current.filter((item) => !idsResolvidos.has(String(item.id))));
+            }}
             atualizacoesContent={(
               <AtualizacoesPedidos
-                atualizacoes={atualizacoes}
+                atualizacoes={atualizacoesVisiveis}
                 statusItens={statusItens}
                 erro={erroAtualizacoes}
                 onRecarregar={carregarAtualizacoes}
                 onVerPedidosGerais={() => setModoLista("geral")}
-                onAtualizacaoResolvida={(atualizacaoId) => {
-                  setAtualizacoes((current) => current.filter((item) => item.id !== atualizacaoId));
+                onPedidoAtualizado={sincronizarPedidoNasAtualizacoes}
+                onAtualizacoesResolvidas={(atualizacaoIds) => {
+                  const idsResolvidos = new Set(atualizacaoIds.map(String));
+                  setAtualizacoes((current) => current.filter((item) => !idsResolvidos.has(String(item.id))));
                 }}
               />
             )}
