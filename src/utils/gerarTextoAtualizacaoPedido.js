@@ -48,6 +48,7 @@ Seu pedido na *Diogo Store* foi enviado.
 ${linhasItens}
 
 Você pode acompanhar a entrega pelo código de rastreio informado. 🚚
+Link dos Correios para rastrear: https://rastreamento.correios.com.br/app/index.php
 
 Qualquer dúvida, estamos à disposição!`;
 }

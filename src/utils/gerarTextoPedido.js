@@ -95,7 +95,8 @@ ${formatCurrency(pedido?.valor_restante)}
 
 Informações adicionais:
 * Data da encomenda: ${formatDate(pedido?.criado_em)}
-* Prazo estimado: 30 - 40 dias úteis para entrega 🚚`;
+* Prazo estimado: 30 - 40 dias úteis para entrega 🚚
+* Link dos Correios para rastrear: https://rastreamento.correios.com.br/app/index.php`;
 }
 
 export default gerarTextoPedidoWhatsApp;
