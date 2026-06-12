@@ -138,6 +138,8 @@ export function ListaPedidos({
   ];
 
   useEffect(() => {
+    if (modoLista !== "geral") return;
+
     const target = loadMoreRef.current;
 
     if (!target || !hasMore || loading || initialLoading) return;
@@ -162,7 +164,7 @@ export function ListaPedidos({
     return () => {
       observer.disconnect();
     };
-  }, [hasMore, loading, initialLoading, page, carregarPedidos]);
+  }, [modoLista, hasMore, loading, initialLoading, page, carregarPedidos]);
 
   return (
     <div className="space-y-6">

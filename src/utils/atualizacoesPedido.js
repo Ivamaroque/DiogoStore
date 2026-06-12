@@ -1,3 +1,5 @@
+import { getStatusResumoPedido } from "@/lib/constants/status";
+
 export const TIPO_NOVO_PEDIDO_GESTOR = "novo_pedido_para_gestor";
 export const TIPO_AVISAR_CLIENTE = "rastreio_adicionado_avisar_cliente";
 
@@ -15,11 +17,17 @@ export function todosItensPossuemRastreio(pedido) {
 
 export function filtrarAtualizacoesVisiveis(atualizacoes) {
   return atualizacoes.filter((atualizacao) => {
+    const pedido = getPedidoDaAtualizacao(atualizacao);
+
+    if (getStatusResumoPedido(pedido?.itens_pedido).chave === "finalizado") {
+      return false;
+    }
+
     if (atualizacao.tipo !== TIPO_NOVO_PEDIDO_GESTOR) {
       return true;
     }
 
-    return !todosItensPossuemRastreio(getPedidoDaAtualizacao(atualizacao));
+    return !todosItensPossuemRastreio(pedido);
   });
 }
 

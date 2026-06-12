@@ -413,7 +413,22 @@ export function PedidoCard({
                         onClick={async () => {
                           try {
                             const atualizado = await atualizarStatusItem({ itemId: item.id, status_item_id: Number(s.id) });
+                            const pedidoAtualizado = {
+                              ...pedidoLocal,
+                              itens_pedido: (pedidoLocal.itens_pedido ?? []).map((currentItem) =>
+                                currentItem.id === item.id
+                                  ? {
+                                      ...currentItem,
+                                      ...atualizado,
+                                      status_itens: s,
+                                    }
+                                  : currentItem,
+                              ),
+                            };
+
+                            setPedidoLocal(pedidoAtualizado);
                             setStatusMap((m) => ({ ...m, [item.id]: s }));
+                            onPedidoAtualizado?.(pedidoAtualizado);
                             toast.success("Status atualizado.");
                           } catch (e) {
                             console.error("Erro ao atualizar status:", e);
