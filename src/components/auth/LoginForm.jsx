@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Lock, User } from "lucide-react";
-import { signIn } from "@/services/authService";
+import { enviarRedefinicaoSenha, signIn } from "@/services/authService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,8 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
+  const [recuperandoSenha, setRecuperandoSenha] = useState(false);
+  const [mensagem, setMensagem] = useState("");
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
@@ -38,6 +40,34 @@ export function LoginForm() {
     } finally {
       setCarregando(false);
     }
+  }
+
+  async function handleRecuperarSenha(event) {
+    event.preventDefault();
+    setErro("");
+    setMensagem("");
+    setCarregando(true);
+
+    try {
+      await enviarRedefinicaoSenha(usuario);
+      setMensagem("Se houver uma conta com esses dados, enviaremos um link para o e-mail cadastrado.");
+    } catch (error) {
+      setErro(error?.message || "Não foi possível enviar o link de redefinição.");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  function abrirRecuperacao() {
+    setErro("");
+    setMensagem("");
+    setRecuperandoSenha(true);
+  }
+
+  function voltarParaLogin() {
+    setErro("");
+    setMensagem("");
+    setRecuperandoSenha(false);
   }
 
   return (
@@ -64,14 +94,14 @@ export function LoginForm() {
           <CardHeader className="space-y-3">
             <Logo compact />
             <div className="pt-4">
-              <CardTitle>Acessar painel</CardTitle>
-              <CardDescription>Entre com seu usuário e senha para continuar.</CardDescription>
+              <CardTitle>{recuperandoSenha ? "Recuperar senha" : "Acessar painel"}</CardTitle>
+              <CardDescription>{recuperandoSenha ? "Informe seu e-mail ou nome de usuário para receber o link." : "Entre com seu usuário e senha para continuar."}</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
-            <form className="space-y-5" onSubmit={handleSubmit}>
+            <form className="space-y-5" onSubmit={recuperandoSenha ? handleRecuperarSenha : handleSubmit}>
               <div className="space-y-2">
-                <Label htmlFor="usuario">Usuário</Label>
+                <Label htmlFor="usuario">{recuperandoSenha ? "E-mail ou nome de usuário" : "Usuário"}</Label>
                 <div className="relative">
                   <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                   <Input
@@ -80,26 +110,33 @@ export function LoginForm() {
                     value={usuario}
                     onChange={(event) => setUsuario(event.target.value)}
                     className="pl-10"
-                    placeholder="seu.usuario"
-                    autoComplete="username"
+                    placeholder={recuperandoSenha ? "email@exemplo.com ou seu.usuario" : "seu.usuario"}
+                    autoComplete={recuperandoSenha ? "off" : "username"}
                     required
                   />
                 </div>
+                {recuperandoSenha ? <p className="text-xs leading-5 text-zinc-500">Enviaremos um link para definir uma nova senha no e-mail cadastrado.</p> : null}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-                  <Input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="pl-10" placeholder="Sua senha" required />
+              {!recuperandoSenha ? (
+                <div className="space-y-2">
+                  <Label htmlFor="password">Senha</Label>
+                  <div className="relative">
+                    <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                    <Input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="pl-10" placeholder="Sua senha" required />
+                  </div>
                 </div>
-              </div>
+              ) : null}
 
               {erro ? <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{erro}</div> : null}
+              {mensagem ? <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">{mensagem}</div> : null}
 
               <Button type="submit" className="w-full" disabled={carregando}>
                 {carregando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Entrar
+                {recuperandoSenha ? "Enviar link de redefinição" : "Entrar"}
+              </Button>
+              <Button type="button" variant="ghost" className="w-full text-zinc-400 hover:text-white" onClick={recuperandoSenha ? voltarParaLogin : abrirRecuperacao} disabled={carregando}>
+                {recuperandoSenha ? "Voltar para o login" : "Esqueci minha senha"}
               </Button>
             </form>
           </CardContent>

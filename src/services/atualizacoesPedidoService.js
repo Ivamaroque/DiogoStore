@@ -28,6 +28,7 @@ export async function listarAtualizacoesPendentes(supabase = getSupabaseBrowserC
         ),
         itens_pedido (
           *,
+          produtos (imagem_path),
           status_itens (
             id,
             nome,
@@ -50,6 +51,7 @@ export async function listarAtualizacoesPendentes(supabase = getSupabaseBrowserC
       ),
       itens_pedido (
         *,
+        produtos (imagem_path),
         status_itens (
           id,
           nome,

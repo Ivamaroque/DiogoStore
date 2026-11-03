@@ -1,4 +1,4 @@
-import { getStatusResumoPedido } from "@/lib/constants/status";
+import { getStatusResumoPedido } from "../lib/constants/status.js";
 
 export const TIPO_NOVO_PEDIDO_GESTOR = "novo_pedido_para_gestor";
 export const TIPO_AVISAR_CLIENTE = "rastreio_adicionado_avisar_cliente";
@@ -7,6 +7,18 @@ export function getPedidoDaAtualizacao(atualizacao) {
   return Array.isArray(atualizacao?.pedidos)
     ? atualizacao.pedidos[0]
     : atualizacao?.pedidos;
+}
+
+export function pedidoCorrespondeFiltros(pedido, { termo = "", status = "todos", funcionarioId = "" } = {}, statusItens = []) {
+  if (!pedido) return false;
+  if (funcionarioId && String(pedido.criado_por) !== String(funcionarioId)) return false;
+  const itens = pedido.itens_pedido ?? [];
+  if (status !== "todos" && getStatusResumoPedido(itens, statusItens).chave !== status) return false;
+
+  const busca = termo.trim().toLocaleLowerCase("pt-BR");
+  if (!busca) return true;
+  return [pedido.nome_cliente, pedido.telefone, ...itens.flatMap((item) => [item.nome_produto, item.rastreios?.codigo_rastreio])]
+    .some((valor) => String(valor ?? "").toLocaleLowerCase("pt-BR").includes(busca));
 }
 
 export function todosItensPossuemRastreio(pedido) {

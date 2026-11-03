@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { PedidoCard } from "./PedidoCard";
 
 export function AtualizacoesPedidos({
   atualizacoes,
+  totalAtualizacoes = 0,
   statusItens = [],
   erro = "",
   onRecarregar,
@@ -21,15 +22,10 @@ export function AtualizacoesPedidos({
   onPedidoAtualizado,
   onAtualizacoesResolvidas,
 }) {
-  const pedidosRecebidos = useMemo(
+  const pedidos = useMemo(
     () => getPedidosUnicosDasAtualizacoes(atualizacoes),
     [atualizacoes],
   );
-  const [pedidos, setPedidos] = useState(pedidosRecebidos);
-
-  useEffect(() => {
-    setPedidos(pedidosRecebidos);
-  }, [pedidosRecebidos]);
 
   const contagemPorRastreio = useMemo(() => contarItensPorRastreio(pedidos), [pedidos]);
 
@@ -52,10 +48,8 @@ export function AtualizacoesPedidos({
       <Card className="border-zinc-800 bg-zinc-900/95">
         <CardContent className="flex flex-col items-center gap-4 px-6 py-14 text-center">
           <div>
-            <p className="text-lg font-semibold text-white">Nenhuma atualização pendente.</p>
-            <p className="mt-2 max-w-xl text-sm text-zinc-400">
-              Quando houver pedidos aguardando ação, eles aparecerão aqui.
-            </p>
+            <p className="text-lg font-semibold text-white">{totalAtualizacoes ? "Nenhum pedido encontrado neste filtro." : "Nenhuma atualização pendente."}</p>
+            {!totalAtualizacoes ? <p className="mt-2 max-w-xl text-sm text-zinc-400">Quando houver pedidos aguardando ação, eles aparecerão aqui.</p> : null}
           </div>
           <Button type="button" onClick={onVerPedidosGerais} className="bg-brand text-white hover:bg-brand/90">
             Ver pedidos gerais
@@ -84,9 +78,6 @@ export function AtualizacoesPedidos({
               />
             ) : undefined}
             onPedidoAtualizado={(pedidoAtualizado) => {
-              setPedidos((current) => current.map((item) => (
-                item.id === pedidoAtualizado.id ? pedidoAtualizado : item
-              )));
               onPedidoAtualizado?.(pedidoAtualizado);
             }}
           />

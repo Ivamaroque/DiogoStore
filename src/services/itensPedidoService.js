@@ -1,17 +1,22 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { obterOuCriarProduto } from "./produtosService";
 
 export async function criarItensPedido({ pedidoId, itens, supabase = getSupabaseBrowserClient() }) {
-  const payload = itens.map((item) => ({
-    pedido_id: pedidoId,
-    rastreio_id: item.rastreio_id ?? null,
-    quantidade: Number(item.quantidade ?? 1),
-    nome_produto: item.nome_produto,
-    tipo: item.tipo ?? null,
-    tamanho: item.tamanho ?? null,
-    observacao_status: item.observacao_status ?? null,
-    ultima_atualizacao_status: new Date().toISOString(),
-    status_item_id: Number(item.status_item_id ?? 1),
-  }));
+  const payload = [];
+  for (const item of itens) {
+    payload.push({
+      pedido_id: pedidoId,
+      produto_id: await obterOuCriarProduto(item, supabase),
+      rastreio_id: item.rastreio_id ?? null,
+      quantidade: Number(item.quantidade ?? 1),
+      nome_produto: item.nome_produto,
+      tipo: item.tipo ?? null,
+      tamanho: item.tamanho ?? null,
+      observacao_status: item.observacao_status ?? null,
+      ultima_atualizacao_status: new Date().toISOString(),
+      status_item_id: Number(item.status_item_id ?? 1),
+    });
+  }
 
   const { data, error } = await supabase.from("itens_pedido").insert(payload).select("*");
   if (error) throw error;

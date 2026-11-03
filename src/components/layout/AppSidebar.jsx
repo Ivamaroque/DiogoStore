@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ClipboardList, Plus, ShoppingBag, Users } from "lucide-react";
+import { ClipboardList, Package, Plus, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "./Logo";
 import logoImg from "@/assets/logo.png";
@@ -10,6 +10,7 @@ import { usePerfilAtual } from "@/hooks/usePerfilAtual";
 const links = [
   { href: "/pedidos", label: "Pedidos", icon: ClipboardList },
   { href: "/pedidos/novo", label: "Novo pedido", icon: Plus },
+  { href: "/produtos", label: "Produtos", icon: Package },
   { href: "/funcionarios", label: "Funcionários", icon: Users },
 ];
 

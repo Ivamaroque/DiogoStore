@@ -1,4 +1,7 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { validarNovaSenha } from "@/utils/senha";
+
+export { validarNovaSenha };
 
 export async function buscarEmailPorUsuario(usuario, supabase = getSupabaseBrowserClient()) {
   const usuarioLimpo = String(usuario ?? "").trim();
@@ -47,6 +50,29 @@ export async function signOutUser() {
   const supabase = getSupabaseBrowserClient();
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
+}
+
+export async function enviarRedefinicaoSenha(identificador) {
+  const supabase = getSupabaseBrowserClient();
+  const entrada = String(identificador ?? "").trim();
+  const email = entrada.includes("@") ? entrada : await buscarEmailPorUsuario(entrada, supabase);
+
+  if (!email) return;
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/redefinir-senha`,
+  });
+
+  if (error) throw new Error("Não foi possível enviar o link de redefinição.");
+}
+
+export async function redefinirSenha(novaSenha) {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase.auth.updateUser({ password: novaSenha });
+
+  if (error) {
+    throw new Error(error.message || "Não foi possível redefinir a senha.");
+  }
 }
 
 export async function getCurrentUser() {

@@ -6,12 +6,14 @@ import { Loader2, RefreshCcw, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { listarFuncionarios } from "@/services/funcionariosService";
 import { PedidoCard } from "./PedidoCard";
 import { contarItensPorRastreio } from "@/utils/rastreios";
 import { sincronizarRastreiosEmGrupo } from "@/services/rastreiosService";
 import { listarPedidosPorPagina } from "@/services/pedidosService";
-import { getStatusResumoPedido } from "@/lib/constants/status";
-import { getAtualizacoesAvisoDoPedido } from "@/utils/atualizacoesPedido";
+import { getAtualizacoesAvisoDoPedido, getPedidoDaAtualizacao, getPedidosUnicosDasAtualizacoes, pedidoCorrespondeFiltros } from "@/utils/atualizacoesPedido";
 import { useStatusItens } from "@/hooks/useStatusItens";
 import { NotificarClienteButton } from "./NotificarClienteButton";
 
@@ -25,10 +27,15 @@ export function ListaPedidos({
   onModoListaChange,
   onPedidoAtualizado,
   onAtualizacoesResolvidas,
-  atualizacoesContent = null,
+  renderAtualizacoesContent,
 }) {
   const { statusItens } = useStatusItens();
+  const { perfil } = useAuth();
+  const gestor = perfil?.funcao === "Gestor";
   const [pedidos, setPedidos] = useState([]);
+  const [funcionarios, setFuncionarios] = useState([]);
+  const [funcionarioId, setFuncionarioId] = useState("todos");
+  const [erroFuncionarios, setErroFuncionarios] = useState("");
   const [termo, setTermo] = useState("");
   const [termoBusca, setTermoBusca] = useState("");
   const [abaAtiva, setAbaAtiva] = useState("aberto");
@@ -58,6 +65,7 @@ export function ListaPedidos({
         page: paginaAtual,
         pageSize: PAGE_SIZE,
         termo: termoBusca,
+        funcionarioId: gestor && funcionarioId !== "todos" ? funcionarioId : "",
       });
 
       if (requestId !== requestIdRef.current) return;
@@ -84,7 +92,20 @@ export function ListaPedidos({
       setLoading(false);
       setInitialLoading(false);
     }
-  }, [termoBusca]);
+  }, [termoBusca, gestor, funcionarioId]);
+
+  useEffect(() => {
+    if (!gestor) return;
+    let ativo = true;
+
+    void listarFuncionarios().then((dados) => {
+      if (ativo) setFuncionarios(dados.filter((funcionario) => funcionario.ativo));
+    }).catch(() => {
+      if (ativo) setErroFuncionarios("Não foi possível carregar os funcionários ativos.");
+    });
+
+    return () => { ativo = false; };
+  }, [gestor]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -116,17 +137,23 @@ export function ListaPedidos({
     void sincronizarRastreiosEmGrupo(contagemPorRastreio).catch(() => {});
   }, [contagemPorRastreio]);
 
-  const pedidosFiltrados = useMemo(() => {
-    return pedidos.filter((pedido) => {
-      const itens = pedido.itens_pedido ?? [];
-      const statusResumo = getStatusResumoPedido(itens, statusItens);
-      const correspondeStatus =
-        abaAtiva === "todos" ||
-        statusResumo?.chave === abaAtiva;
+  const pedidosFiltrados = useMemo(() => pedidos.filter((pedido) =>
+    pedidoCorrespondeFiltros(pedido, { status: abaAtiva }, statusItens)
+  ), [abaAtiva, pedidos, statusItens]);
 
-      return correspondeStatus;
-    });
-  }, [abaAtiva, pedidos, statusItens]);
+  const atualizacoesFiltradas = useMemo(() => atualizacoes.filter((atualizacao) =>
+    pedidoCorrespondeFiltros(getPedidoDaAtualizacao(atualizacao), {
+      termo: termoBusca,
+      status: abaAtiva,
+      funcionarioId: gestor && funcionarioId !== "todos" ? funcionarioId : "",
+    }, statusItens)
+  ), [atualizacoes, termoBusca, abaAtiva, statusItens, gestor, funcionarioId]);
+
+  const atualizacoesCountFiltrado = useMemo(() => getPedidosUnicosDasAtualizacoes(atualizacoes.filter((atualizacao) =>
+    pedidoCorrespondeFiltros(getPedidoDaAtualizacao(atualizacao), {
+      funcionarioId: gestor && funcionarioId !== "todos" ? funcionarioId : "",
+    })
+  )).length, [atualizacoes, gestor, funcionarioId]);
 
   const filtrosRapidos = [
     { id: "todos", label: "Todos" },
@@ -200,6 +227,20 @@ export function ListaPedidos({
             />
           </div>
 
+          {gestor ? (
+            <div className="max-w-sm space-y-2">
+              <label htmlFor="filtro-funcionario-pedidos" className="text-sm font-medium text-zinc-300">Funcionário ativo</label>
+              <Select value={funcionarioId} onValueChange={setFuncionarioId}>
+                <SelectTrigger id="filtro-funcionario-pedidos" className="bg-zinc-950"><SelectValue placeholder="Todos os funcionários" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os funcionários</SelectItem>
+                  {funcionarios.map((funcionario) => <SelectItem key={funcionario.id} value={funcionario.id}>{funcionario.nome_completo || funcionario.usuario}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {erroFuncionarios ? <p className="text-xs text-red-300">{erroFuncionarios}</p> : null}
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap gap-3">
             {filtrosRapidos.map((filtro) => {
               const ativo = abaAtiva === filtro.id;
@@ -230,7 +271,7 @@ export function ListaPedidos({
             ? "h-10 flex-1 bg-brand px-5 text-white hover:bg-brand/90 sm:flex-none"
             : "h-10 flex-1 border border-transparent bg-transparent px-5 text-zinc-400 hover:border-zinc-800 hover:bg-zinc-900 hover:text-white sm:flex-none"}
         >
-          Atualizados ({atualizacoesCount})
+          Atualizados ({gestor && funcionarioId !== "todos" ? atualizacoesCountFiltrado : atualizacoesCount})
         </Button>
         <Button
           type="button"
@@ -244,7 +285,7 @@ export function ListaPedidos({
       </div>
 
       {modoLista === "atualizados" ? (
-        atualizacoesContent
+        renderAtualizacoesContent?.(atualizacoesFiltradas)
       ) : initialLoading ? (
         <div className="space-y-4">
           <p className="text-sm text-zinc-400">Carregando pedidos...</p>

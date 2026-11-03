@@ -1,0 +1,21 @@
+import assert from "node:assert/strict";
+import { getPedidoDaAtualizacao, pedidoCorrespondeFiltros } from "./atualizacoesPedido.js";
+
+const statusItens = [
+  { id: 1, nome: "Pedido realizado" },
+  { id: 4, nome: "Pronto para retirada" },
+];
+const pedido = {
+  criado_por: "funcionario-1",
+  nome_cliente: "João Silva",
+  telefone: "(84) 99999-1234",
+  itens_pedido: [{ nome_produto: "Camisa Vermelha", status_item_id: 4, rastreios: { codigo_rastreio: "BR123" } }],
+};
+const atualizacao = { pedidos: pedido };
+
+assert.equal(pedidoCorrespondeFiltros(getPedidoDaAtualizacao(atualizacao), { termo: "camisa", status: "pronto" }, statusItens), true);
+assert.equal(pedidoCorrespondeFiltros(pedido, { termo: "br123", status: "pronto" }, statusItens), true);
+assert.equal(pedidoCorrespondeFiltros(pedido, { termo: "joão", status: "aberto" }, statusItens), false);
+assert.equal(pedidoCorrespondeFiltros(pedido, { termo: "outro", status: "todos" }, statusItens), false);
+assert.equal(pedidoCorrespondeFiltros(pedido, { funcionarioId: "funcionario-1" }, statusItens), true);
+assert.equal(pedidoCorrespondeFiltros(pedido, { funcionarioId: "funcionario-2" }, statusItens), false);

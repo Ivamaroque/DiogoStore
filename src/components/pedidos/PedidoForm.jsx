@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Loader2, Package, Phone, Save, ShoppingBag, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
@@ -20,10 +20,13 @@ import { formatCurrency } from "@/utils/currency";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { temPersonalizacao } from "@/utils/personalizacao";
 import { useStatusItens } from "@/hooks/useStatusItens";
+import { fotoProduto } from "@/services/produtosService";
+import { FotoProdutoZoom } from "@/components/produtos/FotoProdutoZoom";
 
 const itemPadrao = {
   quantidade: 1,
   nome_produto: "",
+  produto_id: null,
   tipo: "",
   tamanho: "",
   nome_personalizado: "",
@@ -32,6 +35,18 @@ const itemPadrao = {
   rastreio_id: null,
   status_item_id: 1,
 };
+
+function FotoItem({ item }) {
+  const [preview, setPreview] = useState(null);
+  useEffect(() => {
+    if (!item.foto) { setPreview(null); return; }
+    const url = URL.createObjectURL(item.foto);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [item.foto]);
+  const src = preview || fotoProduto(item.imagem_path);
+  return src ? <FotoProdutoZoom src={src} nome={item.nome_produto} className="h-11 w-11 rounded-xl object-cover" /> : null;
+}
 
 export function PedidoForm() {
   const router = useRouter();
@@ -163,9 +178,12 @@ export function PedidoForm() {
                   {itens.map((item, index) => (
                     <div key={`${item.nome_produto}-${index}`} className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
                       <div className="flex items-start justify-between gap-3">
-                        <div>
+                        <div className="flex items-center gap-3">
+                          <FotoItem item={item} />
+                          <div>
                           <p className="text-sm font-semibold text-white">{item.nome_produto}</p>
                           <p className="text-xs text-zinc-500">Qtd. {item.quantidade} • {item.tipo || "Sem tipo"} • {item.tamanho || "Sem tamanho"}</p>
+                          </div>
                         </div>
                         <Button variant="ghost" size="icon" onClick={() => setItens((current) => current.filter((_, currentIndex) => currentIndex !== index))}>
                           <Trash2 className="h-4 w-4" />

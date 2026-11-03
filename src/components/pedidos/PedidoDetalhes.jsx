@@ -25,6 +25,8 @@ import { formatCurrency } from "@/utils/currency";
 import { formatDateTime } from "@/utils/dates";
 import { gerarTextoPedidoWhatsApp } from "@/utils/gerarTextoPedido";
 import { formatarPersonalizacaoItem } from "@/utils/personalizacao";
+import { fotoProduto } from "@/services/produtosService";
+import { FotoProdutoZoom } from "@/components/produtos/FotoProdutoZoom";
 import { listarPagamentosPedido } from "@/services/pagamentosService";
 import { RegistrarPagamentoDialog } from "./RegistrarPagamentoDialog";
 
@@ -295,6 +297,7 @@ export function PedidoDetalhes({ pedidoInicial, statusItens, contagemPorRastreio
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
+                      {item.produtos?.imagem_path ? <FotoProdutoZoom src={fotoProduto(item.produtos.imagem_path)} nome={item.nome_produto} className="h-12 w-12 rounded-xl object-cover" /> : null}
                       <h3 className="text-lg font-semibold text-white">{item.nome_produto}</h3>
                       <Badge variant="brand">Qtd. {item.quantidade}</Badge>
                     </div>

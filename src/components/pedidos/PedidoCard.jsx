@@ -19,6 +19,8 @@ import { useRouter } from "next/navigation";
 import { buscarPedidoPorId } from "@/services/pedidosService";
 import { formatarPersonalizacaoItem } from "@/utils/personalizacao";
 import { RegistrarPagamentoDialog } from "./RegistrarPagamentoDialog";
+import { fotoProduto } from "@/services/produtosService";
+import { FotoProdutoZoom } from "@/components/produtos/FotoProdutoZoom";
 
 export function PedidoCard({
   pedido,
@@ -231,9 +233,7 @@ export function PedidoCard({
               return (
             <div key={item.id} className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-4 lg:flex-row lg:items-center">
               <div className="flex items-start gap-4 min-w-0">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-sm font-semibold text-zinc-300">
-                  {item.quantidade}x
-                </div>
+                {item.produtos?.imagem_path ? <FotoProdutoZoom src={fotoProduto(item.produtos.imagem_path)} nome={item.nome_produto} className="h-12 w-12 rounded-xl object-cover" /> : <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-sm font-semibold text-zinc-300">{item.quantidade}x</div>}
 
                 <div className="min-w-0">
                   <p className="truncate text-[15px] font-semibold text-white sm:text-base">{item.nome_produto}</p>

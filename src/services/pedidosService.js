@@ -4,6 +4,7 @@ import { parseCurrency } from "@/utils/currency";
 import { obterOuCriarRastreio } from "./rastreiosService";
 import { getPersonalizacaoDoItem } from "@/utils/personalizacao";
 import { criarPagamentoPedido } from "./pagamentosService";
+import { obterOuCriarProduto } from "./produtosService";
 
 const pedidosInFlight = new Map();
 
@@ -33,6 +34,7 @@ const PEDIDO_SELECT = `
   ),
   itens_pedido (
     *,
+    produtos (imagem_path),
     personalizacoes_item (
       id,
       item_id,
@@ -54,7 +56,7 @@ const PEDIDO_SELECT = `
   )
 `;
 
-function buildPedidoQuery(supabase, pedidoIds = null) {
+function buildPedidoQuery(supabase, pedidoIds = null, funcionarioId = "") {
   let query = supabase
     .from("pedidos")
     .select(PEDIDO_SELECT, { count: "exact" })
@@ -62,6 +64,10 @@ function buildPedidoQuery(supabase, pedidoIds = null) {
 
   if (pedidoIds) {
     query = query.in("id", pedidoIds);
+  }
+
+  if (funcionarioId) {
+    query = query.eq("criado_por", funcionarioId);
   }
 
   return query;
@@ -134,9 +140,9 @@ async function buscarIdsPedidosPorTermo(termo, supabase) {
   return [...pedidoIds];
 }
 
-export async function listarPedidosPorPagina({ page = 1, pageSize = 10, termo = "" } = {}, supabase = getSupabaseBrowserClient()) {
+export async function listarPedidosPorPagina({ page = 1, pageSize = 10, termo = "", funcionarioId = "" } = {}, supabase = getSupabaseBrowserClient()) {
   const termoLimpo = termo.trim();
-  const key = `listarPedidosPorPagina:${page}:${pageSize}:${termoLimpo.toLowerCase()}`;
+  const key = `listarPedidosPorPagina:${page}:${pageSize}:${termoLimpo.toLowerCase()}:${funcionarioId}`;
 
   return dedupeInFlight(key, async () => {
     const from = (page - 1) * pageSize;
@@ -151,7 +157,7 @@ export async function listarPedidosPorPagina({ page = 1, pageSize = 10, termo = 
       };
     }
 
-    const { data, error, count } = await buildPedidoQuery(supabase, pedidoIds).range(from, to);
+    const { data, error, count } = await buildPedidoQuery(supabase, pedidoIds, funcionarioId).range(from, to);
 
     if (error) throw error;
 
@@ -211,6 +217,10 @@ export async function buscarPedidoPorId(id, supabase = getSupabaseBrowserClient(
 export async function criarPedidoCompleto({ pedido, itens, criadoPor }, supabase = getSupabaseBrowserClient()) {
   const valorTotal = parseCurrency(pedido.valor_total);
   const valorPago = parseCurrency(pedido.valor_pago);
+  const itensComProduto = [];
+  for (const item of itens) {
+    itensComProduto.push({ ...item, produto_id: await obterOuCriarProduto(item, supabase) });
+  }
 
   const { data: pedidoCriado, error: pedidoError } = await supabase
     .from("pedidos")
@@ -230,7 +240,7 @@ export async function criarPedidoCompleto({ pedido, itens, criadoPor }, supabase
 
   const itensComRastreio = [];
 
-  for (const item of itens) {
+  for (const item of itensComProduto) {
     const rastreio = await obterOuCriarRastreio(
       {
         codigo_rastreio: item.codigo_rastreio,
@@ -247,6 +257,7 @@ export async function criarPedidoCompleto({ pedido, itens, criadoPor }, supabase
 
   const itensPayload = itensComRastreio.map((item) => ({
     pedido_id: pedidoCriado.id,
+    produto_id: item.produto_id,
     rastreio_id: item.rastreio_id ?? null,
     quantidade: Number(item.quantidade ?? 1),
     nome_produto: item.nome_produto,

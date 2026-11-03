@@ -99,9 +99,10 @@ export function PedidosClient() {
               const idsResolvidos = new Set(atualizacaoIds.map(String));
               setAtualizacoes((current) => current.filter((item) => !idsResolvidos.has(String(item.id))));
             }}
-            atualizacoesContent={(
+            renderAtualizacoesContent={(atualizacoesFiltradas) => (
               <AtualizacoesPedidos
-                atualizacoes={atualizacoesVisiveis}
+                atualizacoes={atualizacoesFiltradas}
+                totalAtualizacoes={atualizacoesVisiveis.length}
                 statusItens={statusItens}
                 erro={erroAtualizacoes}
                 onRecarregar={carregarAtualizacoes}
