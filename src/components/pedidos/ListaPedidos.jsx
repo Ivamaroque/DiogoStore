@@ -25,6 +25,7 @@ export function ListaPedidos({
   pedidosSincronizados = {},
   atualizacoesCount = 0,
   onModoListaChange,
+  onRecarregarAtualizacoes,
   onPedidoAtualizado,
   onAtualizacoesResolvidas,
   renderAtualizacoesContent,
@@ -158,6 +159,7 @@ export function ListaPedidos({
   const filtrosRapidos = [
     { id: "todos", label: "Todos" },
     { id: "aberto", label: "Em aberto" },
+    { id: "enviado", label: "Enviado" },
     { id: "pronto", label: "Pronto para retirada" },
     { id: "finalizado", label: "Finalizado" },
     { id: "problema", label: "Problema" },
@@ -202,7 +204,7 @@ export function ListaPedidos({
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <Button variant="outline" onClick={() => carregarPedidos({ reset: true })} disabled={loading} className="border-zinc-700 bg-zinc-900 text-white hover:bg-zinc-800">
+          <Button variant="outline" onClick={() => modoLista === "atualizados" ? onRecarregarAtualizacoes?.() : carregarPedidos({ reset: true })} disabled={loading} className="border-zinc-700 bg-zinc-900 text-white hover:bg-zinc-800">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
             Atualizar Lista
           </Button>

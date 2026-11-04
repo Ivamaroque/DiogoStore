@@ -94,6 +94,7 @@ export function PedidosClient() {
             pedidosSincronizados={pedidosSincronizados}
             atualizacoesCount={totalPedidosAtualizados}
             onModoListaChange={setModoLista}
+            onRecarregarAtualizacoes={carregarAtualizacoes}
             onPedidoAtualizado={sincronizarPedidoNasAtualizacoes}
             onAtualizacoesResolvidas={(atualizacaoIds) => {
               const idsResolvidos = new Set(atualizacaoIds.map(String));

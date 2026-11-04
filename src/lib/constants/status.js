@@ -89,16 +89,30 @@ export function getStatusResumoPedido(itens = [], statusItens = []) {
     );
   }
 
+  if (
+    itens.length > 0 &&
+    statusEnviado &&
+    statusValidos.length === itens.length &&
+    statusValidos.every((status) => String(status.id) === String(statusEnviado.id))
+  ) {
+    return criarResumo(
+      "enviado",
+      "Enviado",
+      "Todos os itens foram enviados.",
+      statusEnviado,
+      "#3b82f6",
+    );
+  }
+
   const possuiItemEmAberto = statusValidos.some((status) => (
-    String(status.id) === String(statusRealizado?.id) ||
-    String(status.id) === String(statusEnviado?.id)
+    String(status.id) === String(statusRealizado?.id)
   ));
 
   return criarResumo(
     "aberto",
     "Em aberto",
     possuiItemEmAberto
-      ? "Existem itens realizados ou enviados."
+      ? "Existem itens com pedido realizado."
       : "O pedido ainda possui itens em andamento.",
     null,
     "#ef4444",
