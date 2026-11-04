@@ -93,3 +93,19 @@ export async function confirmarClienteAvisado(atualizacaoId, supabase = getSupab
 
   return true;
 }
+
+export async function marcarPedidoChegou(atualizacaoId, supabase = getSupabaseBrowserClient()) {
+  const { error } = await supabase.rpc("marcar_pedido_chegou", {
+    atualizacao_uuid: atualizacaoId,
+  });
+
+  if (error) throw new Error(error.message || "Não foi possível confirmar a chegada do pedido.");
+}
+
+export async function confirmarEntregaPedido(atualizacaoId, supabase = getSupabaseBrowserClient()) {
+  const { error } = await supabase.rpc("confirmar_entrega_pedido", {
+    atualizacao_uuid: atualizacaoId,
+  });
+
+  if (error) throw new Error(error.message || "Não foi possível confirmar a entrega do pedido.");
+}

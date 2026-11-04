@@ -38,7 +38,7 @@ export function ListaPedidos({
   const [erroFuncionarios, setErroFuncionarios] = useState("");
   const [termo, setTermo] = useState("");
   const [termoBusca, setTermoBusca] = useState("");
-  const [abaAtiva, setAbaAtiva] = useState("aberto");
+  const [abaAtiva, setAbaAtiva] = useState("todos");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -326,6 +326,10 @@ export function ListaPedidos({
                       pedido={pedidoAtual}
                       atualizacoes={atualizacoesAviso}
                       onAtualizacoesResolvidas={onAtualizacoesResolvidas}
+                      onPedidoAtualizado={(pedidoAtualizado) => {
+                        setPedidos((current) => current.map((item) => item.id === pedidoAtualizado.id ? pedidoAtualizado : item));
+                        onPedidoAtualizado?.(pedidoAtualizado);
+                      }}
                     />
                   );
                 })()}

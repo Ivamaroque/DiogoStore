@@ -1,4 +1,4 @@
-import { getPersonalizacaoDoItem } from "@/utils/personalizacao";
+import { getPersonalizacaoDoItem } from "./personalizacao.js";
 
 export function gerarTextoPedidoWhatsApp(pedido) {
   const formatCurrency = (value) => {
@@ -38,7 +38,7 @@ export function gerarTextoPedidoWhatsApp(pedido) {
       const personalizacaoLegada = item?.personalizacao?.trim() || "";
 
       const linhas = [];
-      const tituloItem = codigoRastreio ? `${quantidade}x ${nomeProduto} | ${codigoRastreio}` : `${quantidade}x ${nomeProduto}`;
+      const tituloItem = `${quantidade}x ${nomeProduto}`;
 
       linhas.push(tituloItem);
       linhas.push(`- Tipo: ${tipo}`);
@@ -58,6 +58,10 @@ export function gerarTextoPedidoWhatsApp(pedido) {
 
       if (observacao) {
         linhas.push(`> Observação: ${observacao}`);
+      }
+
+      if (codigoRastreio) {
+        linhas.push(`> Código de Rastreio: ${codigoRastreio}`);
       }
 
       return linhas.join("\n");

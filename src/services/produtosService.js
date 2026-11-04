@@ -7,6 +7,12 @@ export function fotoProduto(path, supabase = getSupabaseBrowserClient()) {
   return path ? supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl : null;
 }
 
+export async function baixarFotoProduto(path, supabase = getSupabaseBrowserClient()) {
+  const { data, error } = await supabase.storage.from(BUCKET).download(path);
+  if (error) throw error;
+  return data;
+}
+
 export async function listarProdutos(supabase = getSupabaseBrowserClient()) {
   const { data, error } = await supabase.from("produtos").select("*").order("nome");
   if (error) throw error;

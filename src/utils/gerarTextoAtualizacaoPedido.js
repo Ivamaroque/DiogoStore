@@ -1,4 +1,4 @@
-import { getPersonalizacaoDoItem } from "@/utils/personalizacao";
+import { getPersonalizacaoDoItem } from "./personalizacao.js";
 
 export function gerarTextoAtualizacaoPedidoWhatsApp(pedido) {
   const nomeCliente = pedido?.nome_cliente || "cliente";
@@ -51,6 +51,23 @@ Você pode acompanhar a entrega pelo código de rastreio informado. 🚚
 Link dos Correios para rastrear: https://rastreamento.correios.com.br/app/index.php
 
 Qualquer dúvida, estamos à disposição!`;
+}
+
+export function gerarTextoPedidoChegouWhatsApp(pedido) {
+  const itens = Array.isArray(pedido?.itens_pedido) ? pedido.itens_pedido : [];
+  const descricao = itens.map((item) => [
+    `${item.quantidade || 1}x ${item.nome_produto || "Produto não informado"}`,
+    item.tipo ? `- Tipo: ${item.tipo}` : null,
+    item.tamanho ? `- Tamanho: ${item.tamanho}` : null,
+  ].filter(Boolean).join("\n")).join("\n\n");
+
+  return `Olá! Temos uma ótima notícia: seu pedido por encomenda chegou! 🧡
+
+📦 Pedido: ${descricao || "Pedido sem itens"}
+
+Gostaríamos de confirmar: você prefere receber por entrega ou realizar a retirada em nossa loja?
+
+Ficamos no aguardo! 😊`;
 }
 
 export default gerarTextoAtualizacaoPedidoWhatsApp;

@@ -98,6 +98,7 @@ export function PedidosClient() {
             onAtualizacoesResolvidas={(atualizacaoIds) => {
               const idsResolvidos = new Set(atualizacaoIds.map(String));
               setAtualizacoes((current) => current.filter((item) => !idsResolvidos.has(String(item.id))));
+              void carregarAtualizacoes();
             }}
             renderAtualizacoesContent={(atualizacoesFiltradas) => (
               <AtualizacoesPedidos
@@ -111,6 +112,7 @@ export function PedidosClient() {
                 onAtualizacoesResolvidas={(atualizacaoIds) => {
                   const idsResolvidos = new Set(atualizacaoIds.map(String));
                   setAtualizacoes((current) => current.filter((item) => !idsResolvidos.has(String(item.id))));
+                  void carregarAtualizacoes();
                 }}
               />
             )}

@@ -2,6 +2,9 @@ import { getStatusResumoPedido } from "../lib/constants/status.js";
 
 export const TIPO_NOVO_PEDIDO_GESTOR = "novo_pedido_para_gestor";
 export const TIPO_AVISAR_CLIENTE = "rastreio_adicionado_avisar_cliente";
+export const TIPO_AGUARDANDO_CHEGADA = "pedido_aguardando_chegada";
+export const TIPO_AVISAR_CHEGADA = "pedido_chegou_avisar_cliente";
+export const TIPO_CONFIRMAR_ENTREGA = "pedido_confirmar_entrega";
 
 export function getPedidoDaAtualizacao(atualizacao) {
   return Array.isArray(atualizacao?.pedidos)
@@ -60,6 +63,6 @@ export function getPedidosUnicosDasAtualizacoes(atualizacoes) {
 export function getAtualizacoesAvisoDoPedido(atualizacoes, pedidoId) {
   return atualizacoes.filter((atualizacao) => (
     String(atualizacao.pedido_id) === String(pedidoId) &&
-    atualizacao.tipo === TIPO_AVISAR_CLIENTE
+    [TIPO_AVISAR_CLIENTE, TIPO_AGUARDANDO_CHEGADA, TIPO_AVISAR_CHEGADA, TIPO_CONFIRMAR_ENTREGA].includes(atualizacao.tipo)
   ));
 }

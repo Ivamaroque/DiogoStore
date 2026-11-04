@@ -75,6 +75,7 @@ export function AtualizacoesPedidos({
                 pedido={pedidoAtual}
                 atualizacoes={atualizacoesAviso}
                 onAtualizacoesResolvidas={onAtualizacoesResolvidas}
+                onPedidoAtualizado={onPedidoAtualizado}
               />
             ) : undefined}
             onPedidoAtualizado={(pedidoAtualizado) => {

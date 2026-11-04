@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { getPedidoDaAtualizacao, pedidoCorrespondeFiltros } from "./atualizacoesPedido.js";
+import { getAtualizacoesAvisoDoPedido, getPedidoDaAtualizacao, pedidoCorrespondeFiltros } from "./atualizacoesPedido.js";
 
 const statusItens = [
   { id: 1, nome: "Pedido realizado" },
@@ -19,3 +19,9 @@ assert.equal(pedidoCorrespondeFiltros(pedido, { termo: "joão", status: "aberto"
 assert.equal(pedidoCorrespondeFiltros(pedido, { termo: "outro", status: "todos" }, statusItens), false);
 assert.equal(pedidoCorrespondeFiltros(pedido, { funcionarioId: "funcionario-1" }, statusItens), true);
 assert.equal(pedidoCorrespondeFiltros(pedido, { funcionarioId: "funcionario-2" }, statusItens), false);
+assert.deepEqual(getAtualizacoesAvisoDoPedido([
+  { id: 1, pedido_id: "pedido-1", tipo: "pedido_aguardando_chegada" },
+  { id: 2, pedido_id: "pedido-1", tipo: "pedido_chegou_avisar_cliente" },
+  { id: 3, pedido_id: "pedido-2", tipo: "pedido_aguardando_chegada" },
+  { id: 4, pedido_id: "pedido-1", tipo: "pedido_confirmar_entrega" },
+], "pedido-1").map((item) => item.id), [1, 2, 4]);
