@@ -11,12 +11,16 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { atualizarItemPedido } from "@/services/itensPedidoService";
 import { upsertPersonalizacaoItem } from "@/services/personalizacoesService";
 import { getPersonalizacaoDoItem } from "@/utils/personalizacao";
-import { fotoProduto } from "@/services/produtosService";
+import { buscarProdutos, fotoProduto } from "@/services/produtosService";
 import { FotoProdutoZoom } from "@/components/produtos/FotoProdutoZoom";
 
 export function EditarItemPedidoDialog({ item, onUpdated, triggerClassName = "inline-flex items-center gap-2", triggerSize = "sm", triggerVariant = "ghost" }) {
   const [open, setOpen] = useState(false);
   const [nome, setNome] = useState("");
+  const [produtoId, setProdutoId] = useState(null);
+  const [imagemPath, setImagemPath] = useState(null);
+  const [sugestoes, setSugestoes] = useState([]);
+  const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
   const [quantidade, setQuantidade] = useState(1);
   const [tipo, setTipo] = useState("");
   const [tamanho, setTamanho] = useState("");
@@ -36,8 +40,25 @@ export function EditarItemPedidoDialog({ item, onUpdated, triggerClassName = "in
   }, [foto]);
 
   useEffect(() => {
+    if (!open || !mostrarSugestoes || nome.trim().length < 2) return;
+    let ativo = true;
+    const timer = setTimeout(() => {
+      buscarProdutos(nome).then((produtos) => {
+        if (ativo) setSugestoes(produtos);
+      }).catch(() => {
+        if (ativo) setSugestoes([]);
+      });
+    }, 200);
+    return () => { ativo = false; clearTimeout(timer); };
+  }, [nome, mostrarSugestoes, open]);
+
+  useEffect(() => {
     if (!item) return;
     setNome(item.nome_produto ?? "");
+    setProdutoId(item.produto_id ?? null);
+    setImagemPath(item.produtos?.imagem_path ?? null);
+    setSugestoes([]);
+    setMostrarSugestoes(false);
     setQuantidade(item.quantidade ?? 1);
     setTipo(item.tipo ?? "");
     setTamanho(item.tamanho ?? "");
@@ -63,7 +84,7 @@ export function EditarItemPedidoDialog({ item, onUpdated, triggerClassName = "in
       const atualizado = await atualizarItemPedido(item.id, {
         quantidade: Number(quantidade),
         nome_produto: nome,
-        produto_id: nome.trim() === item.nome_produto?.trim() ? item.produto_id : null,
+        produto_id: produtoId,
         foto,
         tipo,
         tamanho: tamanho || null,
@@ -103,16 +124,40 @@ export function EditarItemPedidoDialog({ item, onUpdated, triggerClassName = "in
         </DialogHeader>
 
         <div className="grid gap-3">
-          <div>
-            <Label>Nome do produto</Label>
-            <Input value={nome} onChange={(e) => setNome(e.target.value)} />
+          <div className="space-y-2">
+            <Label htmlFor={`nome-produto-editar-${item.id}`}>Nome do produto</Label>
+            <div className="relative">
+              <Input id={`nome-produto-editar-${item.id}`} autoComplete="off" value={nome} onChange={(event) => {
+                setNome(event.target.value);
+                setProdutoId(null);
+                setImagemPath(null);
+                setMostrarSugestoes(true);
+                if (event.target.value.trim().length < 2) setSugestoes([]);
+              }} onFocus={() => setMostrarSugestoes(true)} onBlur={(event) => { if (!event.relatedTarget?.closest(`#sugestoes-produtos-editar-${item.id}`)) setMostrarSugestoes(false); }} onKeyDown={(event) => { if (event.key === "ArrowDown" && sugestoes.length) { event.preventDefault(); document.querySelector(`#sugestoes-produtos-editar-${item.id} button`)?.focus(); } if (event.key === "Escape") setMostrarSugestoes(false); }} aria-expanded={mostrarSugestoes && sugestoes.length > 0} aria-controls={`sugestoes-produtos-editar-${item.id}`} />
+              {mostrarSugestoes && sugestoes.length > 0 ? (
+                <div id={`sugestoes-produtos-editar-${item.id}`} className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-900 p-1 shadow-xl" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setMostrarSugestoes(false); }}>
+                  {sugestoes.map((produto) => (
+                    <button key={produto.id} type="button" className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm text-white hover:bg-zinc-800 focus:bg-zinc-800 focus:outline-none" onMouseDown={(event) => event.preventDefault()} onClick={() => {
+                      setNome(produto.nome);
+                      setProdutoId(produto.id);
+                      setImagemPath(produto.imagem_path);
+                      setFoto(null);
+                      setMostrarSugestoes(false);
+                    }}>
+                      {produto.imagem_path ? <img src={fotoProduto(produto.imagem_path)} alt="" className="h-9 w-9 rounded-lg object-cover" /> : <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-800 text-zinc-500">•</span>}
+                      <span className="font-medium">{produto.nome}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <div className="space-y-2">
             <Label>Foto do produto</Label>
             <div className="flex flex-wrap items-center gap-3">
-              {fotoPreview || item.produtos?.imagem_path ? <FotoProdutoZoom src={fotoPreview || fotoProduto(item.produtos.imagem_path)} nome={nome || "Produto"} className="h-14 w-14 rounded-xl object-cover" /> : <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-zinc-900"><ImagePlus className="h-6 w-6 text-zinc-500" /></div>}
-              <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-zinc-700 px-4 text-sm font-medium text-white hover:bg-zinc-900 focus-within:ring-2 focus-within:ring-brand/40"><ImagePlus className="h-4 w-4" />{foto || item.produtos?.imagem_path ? "Trocar foto" : "Adicionar foto"}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => setFoto(event.target.files?.[0] || null)} /></label>
+              {fotoPreview || imagemPath ? <FotoProdutoZoom src={fotoPreview || fotoProduto(imagemPath)} nome={nome || "Produto"} className="h-14 w-14 rounded-xl object-cover" /> : <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-zinc-900"><ImagePlus className="h-6 w-6 text-zinc-500" /></div>}
+              <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-zinc-700 px-4 text-sm font-medium text-white hover:bg-zinc-900 focus-within:ring-2 focus-within:ring-brand/40"><ImagePlus className="h-4 w-4" />{foto || imagemPath ? "Trocar foto" : "Adicionar foto"}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => setFoto(event.target.files?.[0] || null)} /></label>
             </div>
             <p className="text-xs text-zinc-500">JPG, PNG ou WebP até 20 MB. A foto atualiza o produto no catálogo.</p>
           </div>
