@@ -28,12 +28,26 @@ export async function buscarProdutos(nome, supabase = getSupabaseBrowserClient()
 }
 
 export async function obterOuCriarProduto(item, supabase = getSupabaseBrowserClient()) {
-  if (item.produto_id) return item.produto_id;
+  if (item.produto_id) {
+    if (item.foto) {
+      const { data: produto, error } = await supabase.from("produtos").select("*").eq("id", item.produto_id).single();
+      if (error) throw error;
+      await salvarProduto({ produto, foto: item.foto }, supabase);
+    }
+    return item.produto_id;
+  }
   const nome = item.nome_produto.trim();
   const nomeEscapado = nome.replace(/[\\%_]/g, "\\$&");
   const { data: existente, error: buscaError } = await supabase.from("produtos").select("id").ilike("nome", nomeEscapado).maybeSingle();
   if (buscaError) throw buscaError;
-  if (existente) return existente.id;
+  if (existente) {
+    if (item.foto) {
+      const { data: produto, error } = await supabase.from("produtos").select("*").eq("id", existente.id).single();
+      if (error) throw error;
+      await salvarProduto({ produto, foto: item.foto }, supabase);
+    }
+    return existente.id;
+  }
 
   try {
     const criado = await salvarProduto({ produto: { nome }, foto: item.foto }, supabase);

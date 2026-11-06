@@ -101,11 +101,13 @@ export async function deletarItem(itemId, supabase = getSupabaseBrowserClient())
 }
 
 export async function atualizarItemPedido(id, payload, supabase = getSupabaseBrowserClient()) {
+  const produtoId = await obterOuCriarProduto(payload, supabase);
   const { data, error } = await supabase
     .from("itens_pedido")
     .update({
       quantidade: Number(payload.quantidade) || 1,
       nome_produto: payload.nome_produto,
+      produto_id: produtoId,
       tipo: payload.tipo || null,
       tamanho: payload.tamanho || null,
       observacao_status: payload.observacao_status || null,

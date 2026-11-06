@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Loader2, Package, Phone, Save, ShoppingBag, Trash2, User } from "lucide-react";
+import { AlertCircle, Loader2, Package, Pencil, Phone, Save, ShoppingBag, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,7 @@ import { temPersonalizacao } from "@/utils/personalizacao";
 import { useStatusItens } from "@/hooks/useStatusItens";
 import { fotoProduto } from "@/services/produtosService";
 import { FotoProdutoZoom } from "@/components/produtos/FotoProdutoZoom";
+import { itemDuplicado } from "@/utils/itemDuplicado.mjs";
 
 const itemPadrao = {
   quantidade: 1,
@@ -59,6 +60,7 @@ export function PedidoForm() {
   const [formaPagamento, setFormaPagamento] = useState("Pix");
   const [itens, setItens] = useState([]);
   const [itemAtual, setItemAtual] = useState(itemPadrao);
+  const [indiceEditando, setIndiceEditando] = useState(null);
   const [salvando, setSalvando] = useState(false);
 
   const valorTotalNumerico = parseCurrency(valorTotal);
@@ -69,6 +71,7 @@ export function PedidoForm() {
 
   function limparItem() {
     setItemAtual(itemPadrao);
+    setIndiceEditando(null);
   }
 
   function adicionarItem() {
@@ -77,18 +80,22 @@ export function PedidoForm() {
       return;
     }
 
-    if (Number(itemAtual.quantidade) < 1) {
+    if (!Number.isInteger(Number(itemAtual.quantidade)) || Number(itemAtual.quantidade) < 1) {
       toast.error("A quantidade precisa ser maior ou igual a 1.");
       return;
     }
 
-    setItens((current) => [...current, { ...itemAtual, quantidade: Number(itemAtual.quantidade) }]);
+    const duplicado = itemDuplicado(itens, itemAtual, indiceEditando);
+    if (duplicado) return toast.error("Este item já foi adicionado. Edite a quantidade do item existente.");
+
+    setItens((current) => indiceEditando === null ? [...current, { ...itemAtual, quantidade: Number(itemAtual.quantidade) }] : current.map((item, index) => index === indiceEditando ? { ...itemAtual, quantidade: Number(itemAtual.quantidade) } : item));
     limparItem();
-    toast.success("Item adicionado.");
+    toast.success(indiceEditando === null ? "Item adicionado." : "Item atualizado.");
   }
 
   async function handleSalvar() {
     if (!nomeCliente.trim()) return toast.error("Informe o nome do cliente.");
+    if (indiceEditando !== null) return toast.error("Salve a edição do item antes de salvar o pedido.");
     if (!itens.length) return toast.error("Adicione pelo menos um item.");
     if (valorTotalNumerico <= 0) return toast.error("O valor total precisa ser maior que zero.");
     if (valorPagoNumerico > valorTotalNumerico) return toast.error("O valor pago não pode ser maior que o valor total.");
@@ -115,7 +122,8 @@ export function PedidoForm() {
       router.push(`/pedidos/${resultado.pedido.id}`);
       router.refresh();
     } catch (error) {
-      toast.error(error?.message || "Não foi possível salvar o pedido.");
+      toast.error(error?.pedidoId ? `O pedido foi criado, mas houve uma falha ao concluir. Confira o pedido antes de tentar novamente: ${error.message}` : error?.message || "Não foi possível salvar o pedido.");
+      if (error?.pedidoId) router.push(`/pedidos/${error.pedidoId}`);
     } finally {
       setSalvando(false);
     }
@@ -160,6 +168,7 @@ export function PedidoForm() {
               statusItens={statusItens}
               onChange={setItemAtual}
               onAdicionar={adicionarItem}
+              editando={indiceEditando !== null}
               showStatusBadge={false}
             />
 
@@ -185,9 +194,12 @@ export function PedidoForm() {
                           <p className="text-xs text-zinc-500">Qtd. {item.quantidade} • {item.tipo || "Sem tipo"} • {item.tamanho || "Sem tamanho"}</p>
                           </div>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => setItens((current) => current.filter((_, currentIndex) => currentIndex !== index))}>
+                        <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" aria-label={`Editar ${item.nome_produto}`} onClick={() => { setItemAtual({ ...item }); setIndiceEditando(index); }}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" aria-label={`Remover ${item.nome_produto}`} onClick={() => { setItens((current) => current.filter((_, currentIndex) => currentIndex !== index)); if (indiceEditando === index) limparItem(); else if (indiceEditando > index) setIndiceEditando(indiceEditando - 1); }}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
+                        </div>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <StatusBadge status={1} statusItens={statusItens} />

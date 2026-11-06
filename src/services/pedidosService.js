@@ -238,6 +238,8 @@ export async function criarPedidoCompleto({ pedido, itens, criadoPor }, supabase
 
   if (pedidoError) throw pedidoError;
 
+  let pagamentoIniciado = false;
+  try {
   const itensComRastreio = [];
 
   for (const item of itensComProduto) {
@@ -293,6 +295,7 @@ export async function criarPedidoCompleto({ pedido, itens, criadoPor }, supabase
   }
 
   if (valorPago > 0) {
+    pagamentoIniciado = true;
     await criarPagamentoPedido(
       {
         pedido_id: pedidoCriado.id,
@@ -307,6 +310,18 @@ export async function criarPedidoCompleto({ pedido, itens, criadoPor }, supabase
 
   const pedidoAtualizado = await buscarPedidoPorId(pedidoCriado.id, supabase);
   return { pedido: pedidoAtualizado, itens: itensCriados ?? [] };
+  } catch (error) {
+    if (pagamentoIniciado) {
+      error.pedidoId = pedidoCriado.id;
+      throw error;
+    }
+    const { data: removido, error: exclusaoError } = await supabase.from("pedidos").delete().eq("id", pedidoCriado.id).select("id").maybeSingle();
+    if (exclusaoError || !removido) {
+      error.pedidoId = pedidoCriado.id;
+      error.message = `Pedido ${pedidoCriado.id} foi criado, mas não pôde ser concluído nem removido: ${error.message}`;
+    }
+    throw error;
+  }
 }
 
 export async function atualizarPedido(id, payload, supabase = getSupabaseBrowserClient()) {

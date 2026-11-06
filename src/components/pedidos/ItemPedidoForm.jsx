@@ -13,7 +13,7 @@ import { FotoProdutoZoom } from "@/components/produtos/FotoProdutoZoom";
 
 const tipos = ["Infantil", "Feminina", "Masculina"];
 
-export function ItemPedidoForm({ item, statusItens = [], onChange, onAdicionar, showStatusBadge = true }) {
+export function ItemPedidoForm({ item, statusItens = [], onChange, onAdicionar, editando = false, showStatusBadge = true }) {
   const statusInicial = getStatusPorId(item.status_item_id ?? 1, statusItens);
   const [sugestoes, setSugestoes] = useState([]);
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
@@ -47,7 +47,7 @@ export function ItemPedidoForm({ item, statusItens = [], onChange, onAdicionar, 
     <div className="space-y-4 rounded-3xl border border-zinc-800 bg-zinc-950/70 p-4 sm:p-5">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-base font-semibold text-white">Novo item</h3>
+          <h3 className="text-base font-semibold text-white">{editando ? "Editar item" : "Novo item"}</h3>
           <p className="text-sm text-zinc-500">Cada item começa em “Pedido realizado”.</p>
         </div>
         {showStatusBadge ? <StatusBadge status={statusInicial} /> : null}
@@ -104,10 +104,10 @@ export function ItemPedidoForm({ item, statusItens = [], onChange, onAdicionar, 
           <Label>Foto do produto</Label>
           <div className="flex flex-wrap items-center gap-3">
             {fotoPreview || item.imagem_path ? <FotoProdutoZoom src={fotoPreview || fotoProduto(item.imagem_path)} nome={item.nome_produto || "Produto"} className="h-14 w-14 rounded-xl object-cover" /> : <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-zinc-900"><ImagePlus className="h-6 w-6 text-zinc-500" /></div>}
-            {item.produto_id ? <span className="text-sm text-zinc-400">Foto do catálogo</span> : <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-zinc-700 px-4 text-sm font-medium text-white hover:bg-zinc-900 focus-within:ring-2 focus-within:ring-brand/40"><ImagePlus className="h-4 w-4" />{item.foto ? "Trocar imagem" : "Adicionar imagem"}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => updateField("foto", event.target.files?.[0] || null)} /></label>}
+            <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-zinc-700 px-4 text-sm font-medium text-white hover:bg-zinc-900 focus-within:ring-2 focus-within:ring-brand/40"><ImagePlus className="h-4 w-4" />{item.foto || item.imagem_path ? "Trocar imagem" : "Adicionar imagem"}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => updateField("foto", event.target.files?.[0] || null)} /></label>
             {item.foto ? <span className="max-w-full truncate text-xs text-zinc-500">{item.foto.name}</span> : null}
           </div>
-          {!item.produto_id ? <p className="text-xs text-zinc-500">Opcional. JPG, PNG ou WebP até 20 MB; será salvo em WebP.</p> : null}
+          <p className="text-xs text-zinc-500">Opcional. JPG, PNG ou WebP até 20 MB; será salvo em WebP. A foto atualiza o produto no catálogo.</p>
         </div>
 
         <div className="space-y-2">
@@ -134,7 +134,7 @@ export function ItemPedidoForm({ item, statusItens = [], onChange, onAdicionar, 
       <div className="flex flex-wrap items-center justify-end gap-3">
         <Button type="button" onClick={onAdicionar} className="w-full gap-2 sm:w-auto">
           <Plus className="h-4 w-4" />
-          Adicionar item
+          {editando ? "Salvar item" : "Adicionar item"}
         </Button>
       </div>
     </div>

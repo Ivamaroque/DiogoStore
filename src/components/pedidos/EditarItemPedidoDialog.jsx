@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil } from "lucide-react";
+import { ImagePlus, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { atualizarItemPedido } from "@/services/itensPedidoService";
 import { upsertPersonalizacaoItem } from "@/services/personalizacoesService";
 import { getPersonalizacaoDoItem } from "@/utils/personalizacao";
+import { fotoProduto } from "@/services/produtosService";
+import { FotoProdutoZoom } from "@/components/produtos/FotoProdutoZoom";
 
 export function EditarItemPedidoDialog({ item, onUpdated, triggerClassName = "inline-flex items-center gap-2", triggerSize = "sm", triggerVariant = "ghost" }) {
   const [open, setOpen] = useState(false);
@@ -23,6 +25,15 @@ export function EditarItemPedidoDialog({ item, onUpdated, triggerClassName = "in
   const [observacaoAntigaPersonalizacao, setObservacaoAntigaPersonalizacao] = useState("");
   const [observacao, setObservacao] = useState("");
   const [saving, setSaving] = useState(false);
+  const [foto, setFoto] = useState(null);
+  const [fotoPreview, setFotoPreview] = useState(null);
+
+  useEffect(() => {
+    if (!foto) { setFotoPreview(null); return; }
+    const url = URL.createObjectURL(foto);
+    setFotoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [foto]);
 
   useEffect(() => {
     if (!item) return;
@@ -39,6 +50,7 @@ export function EditarItemPedidoDialog({ item, onUpdated, triggerClassName = "in
     setNumeroPersonalizado(numero);
     setObservacaoAntigaPersonalizacao(!nome?.trim() && !numero?.trim() ? observacaoAntiga : "");
     setObservacao(item.observacao_status ?? "");
+    setFoto(null);
   }, [item, open]);
 
   async function handleSave() {
@@ -51,6 +63,8 @@ export function EditarItemPedidoDialog({ item, onUpdated, triggerClassName = "in
       const atualizado = await atualizarItemPedido(item.id, {
         quantidade: Number(quantidade),
         nome_produto: nome,
+        produto_id: nome.trim() === item.nome_produto?.trim() ? item.produto_id : null,
+        foto,
         tipo,
         tamanho: tamanho || null,
         observacao_status: observacao || null,
@@ -77,7 +91,7 @@ export function EditarItemPedidoDialog({ item, onUpdated, triggerClassName = "in
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={triggerVariant} size={triggerSize} className={triggerClassName}>
+        <Button variant={triggerVariant} size={triggerSize} className={triggerClassName} aria-label={`Editar ${item.nome_produto}`}>
           <Pencil className="h-4 w-4" />
         </Button>
       </DialogTrigger>
@@ -92,6 +106,15 @@ export function EditarItemPedidoDialog({ item, onUpdated, triggerClassName = "in
           <div>
             <Label>Nome do produto</Label>
             <Input value={nome} onChange={(e) => setNome(e.target.value)} />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Foto do produto</Label>
+            <div className="flex flex-wrap items-center gap-3">
+              {fotoPreview || item.produtos?.imagem_path ? <FotoProdutoZoom src={fotoPreview || fotoProduto(item.produtos.imagem_path)} nome={nome || "Produto"} className="h-14 w-14 rounded-xl object-cover" /> : <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-zinc-900"><ImagePlus className="h-6 w-6 text-zinc-500" /></div>}
+              <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-zinc-700 px-4 text-sm font-medium text-white hover:bg-zinc-900 focus-within:ring-2 focus-within:ring-brand/40"><ImagePlus className="h-4 w-4" />{foto || item.produtos?.imagem_path ? "Trocar foto" : "Adicionar foto"}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => setFoto(event.target.files?.[0] || null)} /></label>
+            </div>
+            <p className="text-xs text-zinc-500">JPG, PNG ou WebP até 20 MB. A foto atualiza o produto no catálogo.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
