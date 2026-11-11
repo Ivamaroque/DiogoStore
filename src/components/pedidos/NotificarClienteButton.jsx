@@ -54,7 +54,7 @@ export function NotificarClienteButton({
         const url = URL.createObjectURL(foto);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `pedido-${String(pedido.id).slice(0, 8)}-foto-${index + 1}.webp`;
+        link.download = `pedido-${String(pedido.id).slice(0, 8)}-foto-${index + 1}.${path.split(".").at(-1)}`;
         document.body.appendChild(link);
         link.click();
         link.remove();

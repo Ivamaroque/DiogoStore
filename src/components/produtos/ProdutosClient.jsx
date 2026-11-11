@@ -131,7 +131,7 @@ export function ProdutosClient() {
                 {foto ? <span className="max-w-full truncate text-xs text-zinc-500">{foto.name}</span> : null}
                 <input ref={fotoInputRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => setFoto(event.target.files?.[0] || null)} />
               </div>
-              <p className="text-xs text-zinc-500">JPG, PNG ou WebP até 20 MB. A foto será convertida para WebP.</p>
+              <p className="text-xs text-zinc-500">JPG, PNG ou WebP até 20 MB. A foto será otimizada quando possível.</p>
             </div>
           </div> : null}
           <DialogFooter className="border-t border-zinc-800 pt-4">

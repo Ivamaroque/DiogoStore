@@ -107,7 +107,7 @@ export function ItemPedidoForm({ item, statusItens = [], onChange, onAdicionar, 
             <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-zinc-700 px-4 text-sm font-medium text-white hover:bg-zinc-900 focus-within:ring-2 focus-within:ring-brand/40"><ImagePlus className="h-4 w-4" />{item.foto || item.imagem_path ? "Trocar imagem" : "Adicionar imagem"}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => updateField("foto", event.target.files?.[0] || null)} /></label>
             {item.foto ? <span className="max-w-full truncate text-xs text-zinc-500">{item.foto.name}</span> : null}
           </div>
-          <p className="text-xs text-zinc-500">Opcional. JPG, PNG ou WebP até 20 MB; será salvo em WebP. A foto atualiza o produto no catálogo.</p>
+          <p className="text-xs text-zinc-500">Opcional. JPG, PNG ou WebP até 20 MB. A foto atualiza o produto no catálogo.</p>
         </div>
 
         <div className="space-y-2">

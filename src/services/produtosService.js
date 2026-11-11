@@ -1,5 +1,5 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { converterFotoParaWebp } from "@/utils/produtoImagem.mjs";
+import { prepararFotoProduto } from "@/utils/produtoImagem.mjs";
 
 const BUCKET = "produtos";
 
@@ -66,9 +66,9 @@ export async function salvarProduto({ produto, foto }, supabase = getSupabaseBro
   if (!nome) throw new Error("Informe o nome do produto.");
   let imagemPath = produto.imagem_path || null;
   if (foto) {
-    const webp = await converterFotoParaWebp(foto);
-    imagemPath = `${crypto.randomUUID()}.webp`;
-    const { error } = await supabase.storage.from(BUCKET).upload(imagemPath, webp, { contentType: "image/webp" });
+    const imagem = await prepararFotoProduto(foto);
+    imagemPath = `${crypto.randomUUID()}.${{ "image/webp": "webp", "image/png": "png", "image/jpeg": "jpg" }[imagem.type]}`;
+    const { error } = await supabase.storage.from(BUCKET).upload(imagemPath, imagem, { contentType: imagem.type });
     if (error) throw error;
   }
 

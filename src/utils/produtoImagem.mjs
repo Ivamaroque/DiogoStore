@@ -1,4 +1,4 @@
-export async function converterFotoParaWebp(foto) {
+export async function prepararFotoProduto(foto) {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(foto.type) || foto.size > 20 * 1024 * 1024) {
     throw new Error("A foto deve ser JPG, PNG ou WebP e ter até 20 MB.");
   }
@@ -10,7 +10,12 @@ export async function converterFotoParaWebp(foto) {
   canvas.height = Math.round(bitmap.height * escala);
   canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
-  const webp = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.85));
-  if (!webp || webp.type !== "image/webp" || webp.size > 5 * 1024 * 1024) throw new Error("Não foi possível converter a foto para WebP de até 5 MB.");
-  return webp;
+  let imagem = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.85));
+  if (!imagem || imagem.size > 5 * 1024 * 1024) {
+    imagem = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.75));
+  }
+  if (!imagem || !["image/webp", "image/png", "image/jpeg"].includes(imagem.type) || imagem.size > 5 * 1024 * 1024) {
+    throw new Error("Não foi possível preparar a foto com até 5 MB.");
+  }
+  return imagem;
 }

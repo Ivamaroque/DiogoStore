@@ -24,8 +24,8 @@ using (exists (select 1 from public.perfis where id = (select auth.uid()) and at
 grant select, insert, update, delete on public.produtos to authenticated;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('produtos', 'produtos', true, 5242880, array['image/webp'])
-on conflict (id) do nothing;
+values ('produtos', 'produtos', true, 5242880, array['image/webp', 'image/png', 'image/jpeg'])
+on conflict (id) do update set allowed_mime_types = excluded.allowed_mime_types;
 
 create policy "Equipe ativa envia fotos de produtos" on storage.objects for insert to authenticated
 with check (bucket_id = 'produtos' and exists (select 1 from public.perfis where id = (select auth.uid()) and ativo = true));
